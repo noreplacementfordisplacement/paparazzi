@@ -41,6 +41,8 @@
 #include "subsystems/radio_control.h"
 
 #include "boards/bebop/actuators.h"
+#include "generated/airframe.h"
+#include "subsystems/commands.h"
 
 
 #if !defined(STABILIZATION_INDI_ACT_DYN_P) && !defined(STABILIZATION_INDI_ACT_DYN_Q) && !defined(STABILIZATION_INDI_ACT_DYN_R)
@@ -293,9 +295,14 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   uint16_t m1_rpm = actuators_bebop.rpm_obs[0];
 
   // thrust importeren
+  pprz_t thrust = stabilization_cmd[COMMAND_THRUST];
+
+  // motor allocation
+
+  // INSERT DAAN'S ALLOCATOR
 
   /*  INDI feedback */
-  indi_commands[COMMAND_M1] = indi.u_in.m1;
+  indi_commands[COMMAND_M1] = indi.u_in.p;
   indi_commands[COMMAND_M2] = indi.u_in.q;
   indi_commands[COMMAND_M3] = indi.u_in.r;
   indi_commands[COMMAND_M4] = indi.u_in.r;
@@ -315,14 +322,16 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_indi_calc_cmd(stabilization_att_indi_cmd, &att_err, rate_control);
 
   /* copy the INDI command */
-  stabilization_cmd[COMMAND_ROLL] = stabilization_att_indi_cmd[COMMAND_ROLL];
-  stabilization_cmd[COMMAND_PITCH] = stabilization_att_indi_cmd[COMMAND_PITCH];
-  stabilization_cmd[COMMAND_YAW] = stabilization_att_indi_cmd[COMMAND_YAW];
+  stabilization_cmd[COMMAND_M1] = stabilization_att_indi_cmd[COMMAND_M1];
+  stabilization_cmd[COMMAND_M2] = stabilization_att_indi_cmd[COMMAND_M2];
+  stabilization_cmd[COMMAND_M3] = stabilization_att_indi_cmd[COMMAND_M3];
+  stabilization_cmd[COMMAND_M4] = stabilization_att_indi_cmd[COMMAND_M4];
 
   /* bound the result */
-  BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_M1], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_M2], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_M3], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_M4], MAX_PPRZ);
 }
 
 // This function reads rc commands
