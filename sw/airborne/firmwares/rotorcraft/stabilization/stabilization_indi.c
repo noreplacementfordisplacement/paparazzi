@@ -40,6 +40,9 @@
 #include "paparazzi.h"
 #include "subsystems/radio_control.h"
 
+#include "boards/bebop/actuators.h"
+
+
 #if !defined(STABILIZATION_INDI_ACT_DYN_P) && !defined(STABILIZATION_INDI_ACT_DYN_Q) && !defined(STABILIZATION_INDI_ACT_DYN_R)
 #error You have to define the first order time constant of the actuator dynamics!
 #endif
@@ -286,11 +289,16 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     // only run the estimation if the commands are not zero.
     lms_estimation();
   }
+  // rpm inlezen
+  uint16_t m1_rpm = actuators_bebop.rpm_obs[0];
+
+  // thrust importeren
 
   /*  INDI feedback */
-  indi_commands[COMMAND_ROLL] = indi.u_in.p;
-  indi_commands[COMMAND_PITCH] = indi.u_in.q;
-  indi_commands[COMMAND_YAW] = indi.u_in.r;
+  indi_commands[COMMAND_M1] = indi.u_in.m1;
+  indi_commands[COMMAND_M2] = indi.u_in.q;
+  indi_commands[COMMAND_M3] = indi.u_in.r;
+  indi_commands[COMMAND_M4] = indi.u_in.r;
 }
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)

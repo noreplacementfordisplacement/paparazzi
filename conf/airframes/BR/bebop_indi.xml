@@ -69,6 +69,10 @@
     <axis name="ROLL" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
     <axis name="THRUST" failsafe_value="6000"/>
+    <axis name="M1" failsafe_value="0"/>
+    <axis name="M2" failsafe_value="0"/>
+    <axis name="M3" failsafe_value="0"/>
+    <axis name="M4" failsafe_value="0"/>
   </commands>
 
   <servos driver="Default">
@@ -86,11 +90,11 @@
   </section>
 
   <command_laws>
-    <call fun="motor_mixing_run(autopilot_motors_on,FALSE,values)"/>
-    <set servo="TOP_LEFT" value="motor_mixing.commands[MOTOR_FRONT_LEFT]"/>
-    <set servo="TOP_RIGHT" value="motor_mixing.commands[MOTOR_FRONT_RIGHT]"/>
-    <set servo="BOTTOM_RIGHT" value="motor_mixing.commands[MOTOR_BACK_RIGHT]"/>
-    <set servo="BOTTOM_LEFT" value="motor_mixing.commands[MOTOR_BACK_LEFT]"/>
+    <!--call fun="motor_mixing_run(autopilot_motors_on,FALSE,values)"/-->
+    <set servo="TOP_LEFT" value="@M1"/>
+    <set servo="TOP_RIGHT" value="@M2"/>
+    <set servo="BOTTOM_RIGHT" value="@M3"/>
+    <set servo="BOTTOM_LEFT" value="@M4"/>
   </command_laws>
 
   <section name="AIR_DATA" prefix="AIR_DATA_">
