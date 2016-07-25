@@ -291,22 +291,31 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     // only run the estimation if the commands are not zero.
     lms_estimation();
   }
-  // rpm inlezen
+
+  // -------------------------- 
+  // WLS CONTROL ALLOCATOR PART
+  // --------------------------
+
+  // rpm of motors
   uint16_t m1_rpm = actuators_bebop.rpm_obs[0];
 
-  // thrust importeren
+  // thrust setting
   pprz_t thrust = stabilization_cmd[COMMAND_THRUST];
 
   // motor allocation
 
   // INSERT DAAN'S ALLOCATOR
 
-  /*  INDI feedback */
+  /*  INDI feedback ?? */
   indi_commands[COMMAND_M1] = indi.u_in.p;
   indi_commands[COMMAND_M2] = indi.u_in.q;
   indi_commands[COMMAND_M3] = indi.u_in.r;
   indi_commands[COMMAND_M4] = indi.u_in.r;
 }
+
+  // -----------------------------
+  // -----------------------------
+  // end WLS CONTROL ALLOCATOR PART
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
 {
