@@ -35,6 +35,21 @@
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_rc_setpoint.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude_quat_transformations.h"
 
+
+// --------------
+// Daan's addition
+#include "firmwares/rotorcraft/stabilization/wls_alloc/wls_alloc.h"
+#include <stdio.h>
+
+#ifndef MARIN
+#define MARIN 3
+#endif
+
+#ifndef NICO
+#define NICO 4
+#endif
+//------------
+
 #include "state.h"
 #include "generated/airframe.h"
 #include "paparazzi.h"
@@ -72,6 +87,7 @@
 #define STABILIZATION_INDI_MAX_RATE 6.0
 #endif
 
+
 #if STABILIZATION_INDI_USE_ADAPTIVE
 #warning "Use caution with adaptive indi. See the wiki for more info"
 #endif
@@ -79,6 +95,7 @@
 #ifndef STABILIZATION_INDI_MAX_R
 #define STABILIZATION_INDI_MAX_R STABILIZATION_ATTITUDE_SP_MAX_R
 #endif
+
 
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat   stab_att_sp_quat;
@@ -88,6 +105,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 static void stabilization_indi_second_order_filter_init(struct IndiFilter *filter, float omega, float zeta, float omega_r);
 static void stabilization_indi_second_order_filter(struct IndiFilter *filter, struct FloatRates *input);
 static inline void lms_estimation(void);
+
+// declare test function
+// added by Daan
+static inline void test(void);
 
 #define INDI_EST_SCALE 0.001 //The G values are scaled to avoid numerical problems during the estimation
 struct IndiVariables indi = {
@@ -297,20 +318,20 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   // --------------------------
 
   // rpm of motors
-  uint16_t m1_rpm = actuators_bebop.rpm_obs[0];
+  // uint16_t m1_rpm = actuators_bebop.rpm_obs[0];
 
   // thrust setting
-  pprz_t thrust = stabilization_cmd[COMMAND_THRUST];
+  // pprz_t thrust = stabilization_cmd[COMMAND_THRUST];
 
   // motor allocation
 
-  // INSERT DAAN'S ALLOCATOR
+  //TODO: INSERT DAAN'S ALLOCATOR
 
-  /*  INDI feedback ?? */
-  indi_commands[COMMAND_M1] = indi.u_in.p;
-  indi_commands[COMMAND_M2] = indi.u_in.q;
-  indi_commands[COMMAND_M3] = indi.u_in.r;
-  indi_commands[COMMAND_M4] = indi.u_in.r;
+  /*  INDI feedback (Motor commands) */
+  //indi_commands[COMMAND_M1] = indi.u_in.p;
+  //indi_commands[COMMAND_M2] = indi.u_in.q;
+  //indi_commands[COMMAND_M3] = indi.u_in.r;
+  //indi_commands[COMMAND_M4] = indi.u_in.r;
 }
 
   // -----------------------------
@@ -349,7 +370,7 @@ void stabilization_indi_read_rc(bool in_flight, bool in_carefree, bool coordinat
   struct FloatQuat q_sp;
 #if USE_EARTH_BOUND_RC_SETPOINT
   stabilization_attitude_read_rc_setpoint_quat_earth_bound_f(&q_sp, in_flight, in_carefree, coordinated_turn);
-#else
+#else	
   stabilization_attitude_read_rc_setpoint_quat_f(&q_sp, in_flight, in_carefree, coordinated_turn);
 #endif
   QUAT_BFP_OF_REAL(stab_att_sp_quat, q_sp);
@@ -411,3 +432,32 @@ static inline void lms_estimation(void)
     indi.g2   = est->g2 * INDI_EST_SCALE;
   }
 }
+
+ // -----------------------------------------------
+ // -----------------------------------------------
+ // added this to test compiling with added wls file
+
+void test(void){
+	// m = size(v), n = size(u)
+	// int m = 3 ; int n = 4;
+	float Wv[MARIN] = {3, 3, 1};
+	float B_tmp[MARIN][NICO] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}};
+	float** B = (float**)calloc(MARIN, sizeof(float*));
+	for (int i = 0; i < MARIN; i++) {
+		B[i] = (float*)calloc(NICO, sizeof(float*));
+		for (int j = 0; j < NICO; j++)
+			 B[i][j] = B_tmp[i][j];
+		}
+         float umax[NICO] = {500, 500, 500, 500};
+	 float umin[NICO] = {-500, -500, -500, -500};
+	 float v[MARIN] = {0.00055796,-3.5578,2.535};
+         float u[NICO] = {0, 0, 0, 0};
+
+// call wls solver module
+         wls_alloc(u,v,umin,umax,B,NICO,MARIN,0,0,Wv,0,0,1000,100);
+	 for(int i = 0; i < NICO; i++)
+		 printf("%.2f\n", u[i]);
+
+ }
+
+
