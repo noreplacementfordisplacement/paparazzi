@@ -39,6 +39,7 @@
 #include "generated/airframe.h"
 #include "paparazzi.h"
 #include "subsystems/radio_control.h"
+#include <stdio.h>
 
 #if !defined(STABILIZATION_INDI_ACT_DYN_P) && !defined(STABILIZATION_INDI_ACT_DYN_Q) && !defined(STABILIZATION_INDI_ACT_DYN_R)
 #error You have to define the first order time constant of the actuator dynamics!
@@ -252,6 +253,9 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi.du.p = 1.0 / indi.g1.p * (indi.angular_accel_ref.p - indi.rate.dx.p);
   indi.du.q = 1.0 / indi.g1.q * (indi.angular_accel_ref.q - indi.rate.dx.q);
   indi.du.r = 1.0 / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r);
+
+// DAAN gekloot
+  printf("test du.p %8.3g", indi.du.p);
 
   //add the increment to the total control input
   indi.u_in.p = indi.u.x.p + indi.du.p;

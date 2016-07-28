@@ -42,13 +42,15 @@
     <axis name="PITCH" failsafe_value="0"/>
     <axis name="ROLL" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
-    <axis name="THRUST" failsafe_value="6000"/>
+    <axis name="THRUST" failsafe_value="1000"/>
+    <!-- default = 6000 -->
   </commands>
 
   <servos driver="Default">
     <servo name="TOP_LEFT" no="0" min="3000" neutral="3000" max="12000"/>
-    <servo name="TOP_RIGHT" no="1" min="3000" neutral="3000" max="12000"/>
-    <servo name="BOTTOM_RIGHT" no="2" min="3000" neutral="3000" max="12000"/>
+    <servo name="TOP_RIGHT" no="1" min="1000" neutral="1000" max="12000"/>
+    <servo name="BOTTOM_RIGHT" no="2" min="1000" neutral="1000" max="12000"/>
+    <!-- Default min / neutral = 3000 (added for experiment) -->
     <servo name="BOTTOM_LEFT" no="3" min="3000" neutral="3000" max="12000"/>
   </servos>
 

@@ -69,7 +69,7 @@
       <message name="RC"                       period="0.5"/>
       <message name="ROTORCRAFT_RADIO_CONTROL" period="0.5"/>
       <message name="ROTORCRAFT_STATUS"        period="1"/>
-      <message name="BEBOP_ACTUATORS"          period="0.2"/>
+      <message name="BEBOP_ACTUATORS"          period="0.01"/>
 	<!-- bebop actuators original period period="0.2 -->
     </mode>
 
