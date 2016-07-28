@@ -56,7 +56,7 @@
   />
   <aircraft
    name="Bebop_wls"
-   ac_id="20"
+   ac_id="25"
    airframe="airframes/examples/bebop_wls.xml"
    radio="radios/dummy.xml"
    telemetry="telemetry/default_rotorcraft.xml"

@@ -245,7 +245,7 @@
       </program>
     </session>
 
-<!-- Bebop Motor Plotting -->
+<!-- Bebop Motor Plotting
     <session name="Bebop 4 Laif">
       <program name="Real-time Plotter">
         <arg flag="-g" constant="1000x250-0+0"/>
@@ -255,7 +255,7 @@
         <arg flag="-c" constant="0.00"/>
         <arg flag="-c" constant="-9.81"/>
         <arg flag="-c" constant="*:telemetry:BEBOP_ACTUATORS"/>
-<!--
+
         <arg flag="-c" constant="*:telemetry:BEBOP_ACTUATORS:ay:0.0009766"/>
         <arg flag="-c" constant="*:telemetry:BEBOP_ACTUATORS:az:0.0009766"/>
         <arg flag="-n"/>
@@ -273,9 +273,9 @@
         <arg flag="-c" constant="0.00"/>
         <arg flag="-c" constant="*:telemetry:IMU_MAG_SCALED:mx:0.0004883"/>
         <arg flag="-c" constant="*:telemetry:IMU_MAG_SCALED:my:0.0004883"/>
-        <arg flag="-c" constant="*:telemetry:IMU_MAG_SCALED:mz:0.0004883"/> -->
+        <arg flag="-c" constant="*:telemetry:IMU_MAG_SCALED:mz:0.0004883"/>
       </program>
-    </session>
+    </session> -->
 
     <session name="Messages and Settings">
       <program name="Messages"/>
