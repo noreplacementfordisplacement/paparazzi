@@ -11,7 +11,8 @@
  *
  * paparazzi is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FO
+R A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
@@ -55,7 +56,10 @@
 #define STABILIZATION_INDI_FILT_ZETA 0.55
 #endif
 
-// the yaw sometimes requires more filtering
+// define them in the airframe file if different values are required
+#ifndef STABILIZATION_INDI_FILT_OMEGA
+#define STABILIZATION_INDI_FILT_OMEGA 50.0
+#endif// the yaw sometimes requires more filtering
 #ifndef STABILIZATION_INDI_FILT_OMEGA_R
 #define STABILIZATION_INDI_FILT_OMEGA_R STABILIZATION_INDI_FILT_OMEGA
 #endif
@@ -255,7 +259,25 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi.du.r = 1.0 / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r);
 
 // DAAN gekloot
-  printf("test du.p %8.3g", indi.du.p);
+// ----------------------------------------------
+// ----------------------------------------------
+ float Wv3[3] = {3, 3, 1};
+ printf("Wv3 = \n");
+ printf("-----------------\n");
+  /* Display contents of an n vector. */
+	int i;
+	printf("[ ");
+	for (i=0 ; i<3 ; i++)
+	  	printf("%8.3g ",Wv3[i]);
+        printf("]\n");
+printf("-----------------\n");
+//  printf("-----------------\n");
+//  printf("test G1p: %8.3g \n", indi.g1.p);
+//  printf("test G1q: %8.3g \n", indi.g1.q);
+//  printf("test G1r: %8.3g \n", indi.g1.r);
+//  printf("-----------------\n");
+// ----------------------------------------------
+// ----------------------------------------------
 
   //add the increment to the total control input
   indi.u_in.p = indi.u.x.p + indi.du.p;
