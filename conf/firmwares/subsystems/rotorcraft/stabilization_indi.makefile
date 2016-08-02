@@ -6,6 +6,13 @@ STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_quat_indi.
 STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_quat_transformations.c
 STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/stabilization_attitude_rc_setpoint.c
 
+
+STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/wls_alloc.c
+STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/wls_alloc.c
+STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/qr_solve.c
+STAB_ATT_SRCS += $(SRC_FIRMWARE)/stabilization/r8lib.c
+
+
 ap.CFLAGS += $(STAB_ATT_CFLAGS)
 ap.srcs += $(STAB_ATT_SRCS)
 
