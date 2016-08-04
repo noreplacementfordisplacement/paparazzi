@@ -1,0 +1,24 @@
+<conf>
+  <aircraft
+   name="Bebop2_INDI"
+   ac_id="21"
+   airframe="airframes/TUDELFT/tudelft_bebop_indi.xml"
+   radio="radios/dummy.xml"
+   telemetry="telemetry/default_rotorcraft.xml"
+   flight_plan="flight_plans/TUDELFT/tudelft_delft_bebop_wls.xml"
+   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_indi.xml settings/control/rotorcraft_speed.xml"
+   settings_modules="modules/gps.xml [modules/geo_mag.xml] modules/air_data.xml"
+   gui_color="#ffffcccaccca"
+  />
+  <aircraft
+   name="Get to the chopper"
+   ac_id="18"
+   airframe="airframes/TUDELFT/tudelft_bebop_indiwls.xml"
+   radio="radios/dummy.xml"
+   telemetry="telemetry/default_rotorcraft.xml"
+   flight_plan="flight_plans/TUDELFT/tudelft_delft_bebop_wls.xml"
+   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_indi.xml settings/control/rotorcraft_speed.xml"
+   settings_modules="modules/gps.xml [modules/geo_mag.xml] modules/air_data.xml"
+   gui_color="#ffffcccaccca"
+  />
+</conf>

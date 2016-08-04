@@ -40,6 +40,12 @@
 #include "paparazzi.h"
 #include "subsystems/radio_control.h"
 
+// WLS Control allocator libraries
+#include "wls/wls_alloc.h"
+// #include "wls/qr_solve.h"
+// #include "wls/r8lib.h"
+#include <stdio.h>
+
 #if !defined(STABILIZATION_INDI_ACT_DYN_P) && !defined(STABILIZATION_INDI_ACT_DYN_Q) && !defined(STABILIZATION_INDI_ACT_DYN_R)
 #error You have to define the first order time constant of the actuator dynamics!
 #endif
@@ -252,6 +258,65 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi.du.p = 1.0 / indi.g1.p * (indi.angular_accel_ref.p - indi.rate.dx.p);
   indi.du.q = 1.0 / indi.g1.q * (indi.angular_accel_ref.q - indi.rate.dx.q);
   indi.du.r = 1.0 / (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r);
+  
+  //---------------------------------------------------------------------
+  //---------------------------------------------------------------------
+  // 				0 0
+  // WLS Control Allocator       x
+  //                            0 0
+
+  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
+  float B_tmp[3][4] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}}; // (Temporary) Control effectiveness matrix
+
+    // Actually define the Control Effectiveness		   
+  float** B = (float**)calloc(3, sizeof(float*)); 
+    for (int i = 0; i < 3; i++) {
+        B[i] = (float*)calloc(4, sizeof(float*));
+        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
+    }
+
+    // Maximum and minimum actuator deflections
+    float umax[4] = {12000, 12000, 12000, 12000};
+    float umin[4] = {3000, 3000, 3000, 3000};
+
+    // Control objective v
+    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
+
+    // Current actuator state
+    float u[4] = {0, 0, 0, 0};
+
+    // Call wls control allocator
+    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+
+    //for(int i = 0; i < 4; i++)
+    //    printf("%.2f\n", u[i]);
+    //return 0;
+
+ printf("u = \n");
+ printf("-----------------\n");
+  /* Display contents of an n vector. */
+	int i;
+	printf("[ ");
+	for (i=0 ; i < 4 ; i++)
+	  	printf("%8.3g ",u[i]);
+        printf("]\n");
+printf("-----------------\n");
+
+//display contents of the matrix
+ printf("B_tmp = \n");
+ printf("-----------------\n");
+	  i = 0;
+	  int j = 0;
+	    for (i=0 ; i < 3; i++) {
+		if (i==0) printf("[ ");
+		else printf("  ");
+		for (j=0 ; j < 4; j++)
+		  printf("%8.3g ",B_tmp[i][j]);
+		if (i<2) printf("\n");
+		 else printf("]\n");
+	}
+ printf("-----------------\n");
+
 
   //add the increment to the total control input
   indi.u_in.p = indi.u.x.p + indi.du.p;

@@ -1,77 +1,11 @@
 <conf>
   <aircraft
-   name="ARDrone2_default"
-   ac_id="10"
-   airframe="airframes/examples/ardrone2.xml"
-   radio="radios/dummy.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_basic.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_att_int_quat.xml settings/estimation/ahrs_int_cmpl_quat.xml settings/estimation/body_to_imu.xml"
-   settings_modules="modules/gps.xml modules/gps_ubx_ucenter.xml modules/air_data.xml modules/geo_mag.xml modules/video_rtp_stream.xml"
-   gui_color="#ffffd633d633"
-  />
-  <aircraft
-   name="ARDrone2_flip"
-   ac_id="14"
-   airframe="airframes/TUDELFT/tudelft_ardrone2_flip.xml"
-   radio="radios/dummy.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_basic.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/estimation/ahrs_int_cmpl_quat.xml settings/estimation/body_to_imu.xml settings/control/stabilization_indi.xml"
-   settings_modules="modules/gps.xml modules/air_data.xml"
-   gui_color="#ffffcd49cd49"
-  />
-  <aircraft
-   name="ARDrone2_indi"
-   ac_id="13"
-   airframe="airframes/TUDELFT/tudelft_ardrone2_indi.xml"
-   radio="radios/dummy.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_basic.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/estimation/ahrs_int_cmpl_quat.xml settings/estimation/body_to_imu.xml settings/control/stabilization_indi.xml"
-   settings_modules="modules/gps.xml modules/gps_ubx_ucenter.xml modules/air_data.xml"
-   gui_color="#ffffc457c457"
-  />
-  <aircraft
-   name="ARDrone2_opticflow"
-   ac_id="12"
-   airframe="airframes/TUDELFT/tudelft_ardrone2_opticflow.xml"
-   radio="radios/dummy.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_basic.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_att_int_quat.xml settings/estimation/ahrs_int_cmpl_quat.xml settings/estimation/body_to_imu.xml"
-   settings_modules="modules/gps.xml modules/gps_ubx_ucenter.xml modules/cv_opticflow.xml modules/video_capture.xml"
-   gui_color="#ffffccc2ccc2"
-  />
-  <aircraft
-   name="ARDrone2_optitrack"
-   ac_id="11"
-   airframe="airframes/TUDELFT/tudelft_ardrone2_optitrack.xml"
-   radio="radios/dummy.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_optitrack.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/estimation/ahrs_int_cmpl_quat.xml settings/estimation/body_to_imu.xml settings/control/stabilization_indi.xml"
-   settings_modules="modules/gps.xml"
-   gui_color="#fffff996b847"
-  />
-  <aircraft
-   name="Ardrone2_182"
-   ac_id="182"
-   airframe="airframes/TUDELFT/IMAV2013/tudelft_ardrone2.xml"
-   radio="radios/cockpitSX.xml"
-   telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/rotorcraft_basic.xml"
-   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_att_int.xml"
-   settings_modules="modules/gps.xml modules/gps_ubx_ucenter.xml modules/time_countdown.xml"
-   gui_color="red"
-  />
-  <aircraft
-   name="Bebop2_Smeur"
+   name="Bebop2_INDI"
    ac_id="21"
    airframe="airframes/TUDELFT/tudelft_bebop_indi.xml"
    radio="radios/dummy.xml"
    telemetry="telemetry/default_rotorcraft.xml"
-   flight_plan="flight_plans/TUDELFT/tudelft_delft_basic.xml"
+   flight_plan="flight_plans/TUDELFT/tudelft_delft_bebop_wls.xml"
    settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_indi.xml settings/control/rotorcraft_speed.xml"
    settings_modules="modules/gps.xml [modules/geo_mag.xml] modules/air_data.xml"
    gui_color="#ffffcccaccca"
@@ -141,6 +75,17 @@
    settings="settings/rotorcraft_basic.xml settings/control/stabilization_att_int.xml settings/control/rotorcraft_guidance.xml"
    settings_modules="modules/gps.xml modules/air_data.xml modules/gps_ubx_ucenter.xml"
    gui_color="#c99fb4caebdd"
+  />
+  <aircraft
+   name="Get_to_the_chopper"
+   ac_id="100"
+   airframe="airframes/TUDELFT/tudelft_bebop_indiwls.xml"
+   radio="radios/dummy.xml"
+   telemetry="telemetry/default_rotorcraft.xml"
+   flight_plan="flight_plans/TUDELFT/tudelft_delft_bebop_wls.xml"
+   settings="settings/rotorcraft_basic.xml settings/control/rotorcraft_guidance.xml settings/control/stabilization_indi.xml settings/control/rotorcraft_speed.xml"
+   settings_modules="modules/gps.xml [modules/geo_mag.xml] modules/air_data.xml"
+   gui_color="#ffffcccaccca"
   />
   <aircraft
    name="Heli450"

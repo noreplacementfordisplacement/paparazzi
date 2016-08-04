@@ -1,0 +1,24 @@
+<!DOCTYPE flight_plan SYSTEM "../flight_plan.dtd">
+
+<flight_plan alt="4" ground_alt="0" lat0="51 59 27.6" lon0="4 22 42.0" max_dist_from_home="60" name="Delft Basic" security_height="2">
+  <header>
+#include "autopilot.h"
+</header>
+  <waypoints>
+    <waypoint name="HOME" x="0.0" y="0.0"/>
+    <waypoint name="CLIMB" x="0.0" y="5.0"/>
+    <waypoint name="STDBY" x="-2.0" y="-5.0"/>
+    <waypoint name="p1" x="-19.9" y="14.3"/>
+    <waypoint name="p2" x="-0.6" y="21.6"/>
+    <waypoint name="p3" x="22.2" y="-26.5"/>
+    <waypoint name="p4" x="4.9" y="-34.4"/>
+    <waypoint name="CAM" x="14.2" y="-29.4"/>
+    <waypoint name="TD" x="5.6" y="-10.9"/>
+  </waypoints>
+  <blocks>
+    <block name="Wait GPS">
+      <call fun="NavKillThrottle()"/>
+      <while cond="!GpsFixValid()"/>
+    </block>
+  </blocks>
+</flight_plan>

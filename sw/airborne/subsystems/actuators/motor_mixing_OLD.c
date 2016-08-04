@@ -27,7 +27,6 @@
 
 #include "subsystems/actuators/motor_mixing.h"
 #include "paparazzi.h"
-#include "stdio.h" // for printfs
 
 //#include <stdint.h>
 #ifndef INT32_MIN
@@ -103,24 +102,9 @@ void motor_mixing_init(void)
       roll_coef[i]  * MOTOR_MIXING_TRIM_ROLL +
       pitch_coef[i] * MOTOR_MIXING_TRIM_PITCH +
       yaw_coef[i]   * MOTOR_MIXING_TRIM_YAW;
-
-//  OVERRIDE the motor_mixing run for the wls control allocator
-    motor_mixing.override_enabled[i] = true ; 	//should be false
-    motor_mixing.override_value[i] = 0; 	//override value
+    motor_mixing.override_enabled[i] = false;
+    motor_mixing.override_value[i] = MOTOR_MIXING_STOP_MOTOR;
   }
-// MANUALLY DEFINE MOTOR RPMS
-   	printf("--------------------------\n");
-    motor_mixing.override_value[0] = 1067; //4000 rpm
-	printf("Manually set motor 1 at 4000 rpm \n");
-    motor_mixing.override_value[1] = 2133; //5000 rpm
-	printf("Manually set motor 2 at 5000 rpm \n");
-    motor_mixing.override_value[2] = 3200; //6000 rpm
-	printf("Manually set motor 3 at 6000 rpm \n");
-    motor_mixing.override_value[3] = 4267; //7000 rpm
-	printf("Manually set motor 4 at 7000 rpm \n");
-	printf("--------------------------\n");
-
-
   motor_mixing.nb_failure = 0;
   motor_mixing.nb_saturation = 0;
 }
@@ -274,13 +258,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
         if (motor_mixing.override_enabled[i]) {
           motor_mixing.commands[i] = motor_mixing.override_value[i];
-		
-		// printfs
-	//	printf("--------------------------\n");
-	//	printf("motor1: %d", motor_mixing.commands[i]);
-	//	printf("--------------------------\n");
-
-        }	
+        }
       }
     }
     bound_commands();
