@@ -40,6 +40,10 @@
 #include "paparazzi.h"
 #include "subsystems/radio_control.h"
 
+// Actuator feedback libraries
+#include "boards/bebop/actuators.h"
+#include "subsystems/commands.h"
+
 // WLS Control allocator libraries
 #include "wls/wls_alloc.h"
 // #include "wls/qr_solve.h"
@@ -264,6 +268,8 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   // 				0 0
   // WLS Control Allocator       x
   //                            0 0
+  //---------------------------------------------------------------------
+  //---------------------------------------------------------------------
 
   float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
   float B_tmp[3][4] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}}; // (Temporary) Control effectiveness matrix
@@ -278,15 +284,26 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     // Maximum and minimum actuator deflections
     float umax[4] = {12000, 12000, 12000, 12000};
     float umin[4] = {3000, 3000, 3000, 3000};
+    int32_t wls_to_motor[4] = {0, 0, 0, 0}; // to actuators
 
     // Control objective v
     float v[3] = {indi.du.p, indi.du.q, indi.du.r};
 
     // Current actuator state
-    float u[4] = {0, 0, 0, 0};
+    float u[4] = {actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3]};
 
     // Call wls control allocator
     wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+
+    // Export to motor mixing (actuators)
+    int32_t wls_to_motor[0] = (int32_t) u[0];
+    int32_t wls_to_motor[1] = (int32_t) u[1];
+    int32_t wls_to_motor[2] = (int32_t) u[2];
+    int32_t wls_to_motor[3] = (int32_t) u[3];	
+	
+    // Ewoud approved method
+    // indi_du_in_actuators[0] = (G1G2_pseudo_inv[0][0] * (angular_accel_ref.p - filtered_rate_deriv.p)) + (G1G2_pseudo_inv[0][1] * (angular_accel_ref.q - filtered_rate_deriv.q)) + (G1G2_pseudo_inv[0][2] * (angular_accel_ref.r - filtered_rate_deriv.r + G2_times_du));
+
 
     //for(int i = 0; i < 4; i++)
     //    printf("%.2f\n", u[i]);
@@ -316,6 +333,15 @@ printf("-----------------\n");
 		 else printf("]\n");
 	}
  printf("-----------------\n");
+
+ //---------------------------------------------------------------------
+ //---------------------------------------------------------------------
+ // 		               0 0
+ // END of wls control          x     :( :( :( :(
+ //                            0 0
+ //---------------------------------------------------------------------
+ //---------------------------------------------------------------------
+
 
 
   //add the increment to the total control input

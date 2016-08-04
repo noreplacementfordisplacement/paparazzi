@@ -11,8 +11,8 @@
    gui_color="#ffffcccaccca"
   />
   <aircraft
-   name="Get to the chopper"
-   ac_id="18"
+   name="Get_to_the_chopper"
+   ac_id="14"
    airframe="airframes/TUDELFT/tudelft_bebop_indiwls.xml"
    radio="radios/dummy.xml"
    telemetry="telemetry/default_rotorcraft.xml"

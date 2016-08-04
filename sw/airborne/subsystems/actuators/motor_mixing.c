@@ -25,6 +25,9 @@
  *  to actual motor commands.
  */
 
+// Direct input to actuators
+#include "firmwares/rotorcraft/stabilization/stabilization_indi.h"
+
 #include "subsystems/actuators/motor_mixing.h"
 #include "paparazzi.h"
 #include "stdio.h" // for printfs
@@ -110,7 +113,7 @@ void motor_mixing_init(void)
   }
 // MANUALLY DEFINE MOTOR RPMS
    	printf("--------------------------\n");
-    motor_mixing.override_value[0] = 1067; //4000 rpm
+    motor_mixing.override_value[0] = wls_to_motor[0]; //4000 rpm
 	printf("Manually set motor 1 at 4000 rpm \n");
     motor_mixing.override_value[1] = 2133; //5000 rpm
 	printf("Manually set motor 2 at 5000 rpm \n");
@@ -119,6 +122,15 @@ void motor_mixing_init(void)
     motor_mixing.override_value[3] = 4267; //7000 rpm
 	printf("Manually set motor 4 at 7000 rpm \n");
 	printf("--------------------------\n");
+
+//	Motor Mixing #EWOUD HACK
+
+//      motor_mixing.commands[i] = MOTOR_MIXING_MIN_MOTOR +
+//         (thrust_coef[i] * in_cmd[COMMAND_THRUST] +
+        // yaw_coef[i] * in_cmd[COMMAND_YAW] +
+//        (motor_mixing.trim[i]) / MOTOR_MIXING_SCALE *
+//        (MOTOR_MIXING_MAX_MOTOR - MOTOR_MIXING_MIN_MOTOR) / MAX_PPRZ +
+//indi_u_in_estimation_i[i];
 
 
   motor_mixing.nb_failure = 0;
