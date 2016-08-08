@@ -296,10 +296,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
 
     // Export to motor mixing (actuators)
-    int32_t wls_to_motor[0] = (int32_t) u[0];
-    int32_t wls_to_motor[1] = (int32_t) u[1];
-    int32_t wls_to_motor[2] = (int32_t) u[2];
-    int32_t wls_to_motor[3] = (int32_t) u[3];	
+    wls_to_motor[0] = (int32_t) u[0];
+    wls_to_motor[1] = (int32_t) u[1];
+    wls_to_motor[2] = (int32_t) u[2];
+    wls_to_motor[3] = (int32_t) u[3];	
 	
     // Ewoud approved method
     // indi_du_in_actuators[0] = (G1G2_pseudo_inv[0][0] * (angular_accel_ref.p - filtered_rate_deriv.p)) + (G1G2_pseudo_inv[0][1] * (angular_accel_ref.q - filtered_rate_deriv.q)) + (G1G2_pseudo_inv[0][2] * (angular_accel_ref.r - filtered_rate_deriv.r + G2_times_du));
