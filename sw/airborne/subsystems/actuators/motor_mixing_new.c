@@ -25,8 +25,12 @@
  *  to actual motor commands.
  */
 
+// Direct input to actuators
+#include "firmwares/rotorcraft/stabilization/stabilization_indi.h"
+
 #include "subsystems/actuators/motor_mixing.h"
 #include "paparazzi.h"
+#include "stdio.h" // for printfs
 
 //#include <stdint.h>
 #ifndef INT32_MIN
@@ -102,9 +106,33 @@ void motor_mixing_init(void)
       roll_coef[i]  * MOTOR_MIXING_TRIM_ROLL +
       pitch_coef[i] * MOTOR_MIXING_TRIM_PITCH +
       yaw_coef[i]   * MOTOR_MIXING_TRIM_YAW;
-    motor_mixing.override_enabled[i] = false;
-    motor_mixing.override_value[i] = MOTOR_MIXING_STOP_MOTOR;
+
+//  OVERRIDE the motor_mixing run for the wls control allocator
+    motor_mixing.override_enabled[i] = true ; 	//should be false
+    motor_mixing.override_value[i] = 0; 	//override value
   }
+// MANUALLY DEFINE MOTOR RPMS
+   	printf("--------------------------\n");
+    motor_mixing.override_value[0] = wls_to_motor[0]; //4000 rpm
+	printf("Manually set motor 1 at 4000 rpm \n");
+    motor_mixing.override_value[1] = 2133; //5000 rpm
+	printf("Manually set motor 2 at 5000 rpm \n");
+    motor_mixing.override_value[2] = 3200; //6000 rpm
+	printf("Manually set motor 3 at 6000 rpm \n");
+    motor_mixing.override_value[3] = 4267; //7000 rpm
+	printf("Manually set motor 4 at 7000 rpm \n");
+	printf("--------------------------\n");
+
+//	Motor Mixing #EWOUD HACK
+
+//      motor_mixing.commands[i] = MOTOR_MIXING_MIN_MOTOR +
+//         (thrust_coef[i] * in_cmd[COMMAND_THRUST] +
+        // yaw_coef[i] * in_cmd[COMMAND_YAW] +
+//        (motor_mixing.trim[i]) / MOTOR_MIXING_SCALE *
+//        (MOTOR_MIXING_MAX_MOTOR - MOTOR_MIXING_MIN_MOTOR) / MAX_PPRZ +
+//indi_u_in_estimation_i[i];
+
+
   motor_mixing.nb_failure = 0;
   motor_mixing.nb_saturation = 0;
 }
@@ -194,35 +222,35 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       motor_mixing.commands[i] = motor_mixing.trim[i] +
         roll_coef[i] * in_cmd[COMMAND_ROLL] +
         pitch_coef[i] * in_cmd[COMMAND_PITCH] +
-        thrust_coef[i] * in_cmd[COMMAND_THRUST] + yaw_coef[i] * in_cmd[COMMAND_YAW]; //FIXME: ADDED YAW COMMAND!!
+        thrust_coef[i] * in_cmd[COMMAND_THRUST];
 
       /* compute the command with yaw for each motor to check how much it would saturate */
-//      tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];
-//      tmp_cmd /= MOTOR_MIXING_SCALE;
+      tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];
+      tmp_cmd /= MOTOR_MIXING_SCALE;
 
-//    /* remember max overflow (how much in saturation) */
-//      if (-tmp_cmd > max_overflow) {
-//       max_overflow = -tmp_cmd;
-//      }
-//      else if (tmp_cmd - MAX_PPRZ > max_overflow) {
-//        max_overflow = tmp_cmd - MAX_PPRZ;
-//      }
-//    }
+      /* remember max overflow (how much in saturation) */
+      if (-tmp_cmd > max_overflow) {
+        max_overflow = -tmp_cmd;
+      }
+      else if (tmp_cmd - MAX_PPRZ > max_overflow) {
+        max_overflow = tmp_cmd - MAX_PPRZ;
+      }
+    }
 
-//    /* calculate how much authority is left for yaw command */
-//    int32_t yaw_authority = ABS(in_cmd[COMMAND_YAW]) - max_overflow;
-//    Bound(yaw_authority, 0, MAX_PPRZ);
-//    int32_t bounded_yaw_cmd = in_cmd[COMMAND_YAW];
-//    BoundAbs(bounded_yaw_cmd, yaw_authority);
-//
-//    /* min/max of commands */
-//    int32_t min_cmd = INT32_MAX;
-//    int32_t max_cmd = INT32_MIN;
+    /* calculate how much authority is left for yaw command */
+    int32_t yaw_authority = ABS(in_cmd[COMMAND_YAW]) - max_overflow;
+    Bound(yaw_authority, 0, MAX_PPRZ);
+    int32_t bounded_yaw_cmd = in_cmd[COMMAND_YAW];
+    BoundAbs(bounded_yaw_cmd, yaw_authority);
 
-//    /* add the bounded yaw command and scale */
-//    for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
-//      motor_mixing.commands[i] += yaw_coef[i] * bounded_yaw_cmd;
-//      motor_mixing.commands[i] /= MOTOR_MIXING_SCALE;
+    /* min/max of commands */
+    int32_t min_cmd = INT32_MAX;
+    int32_t max_cmd = INT32_MIN;
+
+    /* add the bounded yaw command and scale */
+    for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
+      motor_mixing.commands[i] += yaw_coef[i] * bounded_yaw_cmd;
+      motor_mixing.commands[i] /= MOTOR_MIXING_SCALE;
 
       /* remember min/max */
       if (motor_mixing.commands[i] < min_cmd) {
@@ -258,7 +286,13 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
         if (motor_mixing.override_enabled[i]) {
           motor_mixing.commands[i] = motor_mixing.override_value[i];
-        }
+		
+		// printfs
+	//	printf("--------------------------\n");
+	//	printf("motor1: %d", motor_mixing.commands[i]);
+	//	printf("--------------------------\n");
+
+        }	
       }
     }
     bound_commands();
