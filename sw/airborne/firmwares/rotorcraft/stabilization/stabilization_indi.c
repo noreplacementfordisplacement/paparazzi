@@ -290,7 +290,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
 
     // Current actuator state
-    float u[4] = {actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3]};
+//    float u[4] = {actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3]};
 
     // Call wls control allocator
 //    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
@@ -321,18 +321,19 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //
 //display contents of the matrix
 // printf("B_tmp = \n");
-// printf("-----------------\n");
+ printf("-----------------\n");
 //	  i = 0;
 //	  int j = 0;
 //	    for (i=0 ; i < 3; i++) {
 //		if (i==0) printf("[ ");
 //		else printf("  ");
 //		for (j=0 ; j < 4; j++)
-//		  printf("%8.3g ",B_tmp[i][j]);
+		 printf("%8.3g\n",COMMAND_THRUST);
+		 printf("%8.3g\n",COMMAND_PITCH);
 //		if (i<2) printf("\n");
 //		 else printf("]\n");
 //	}
-// printf("-----------------\n");
+ printf("-----------------\n");
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------

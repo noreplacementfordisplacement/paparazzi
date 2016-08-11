@@ -207,7 +207,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
 //      else if (tmp_cmd - MAX_PPRZ > max_overflow) {
 //        max_overflow = tmp_cmd - MAX_PPRZ;
 //      }
-//    }
+    } //FIXME: END FOR LOOP
 
 //    /* calculate how much authority is left for yaw command */
 //    int32_t yaw_authority = ABS(in_cmd[COMMAND_YAW]) - max_overflow;
@@ -215,14 +215,14 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
 //    int32_t bounded_yaw_cmd = in_cmd[COMMAND_YAW];
 //    BoundAbs(bounded_yaw_cmd, yaw_authority);
 //
-//    /* min/max of commands */
-//    int32_t min_cmd = INT32_MAX;
-//    int32_t max_cmd = INT32_MIN;
+    /* min/max of commands */
+    int32_t min_cmd = INT32_MAX;
+    int32_t max_cmd = INT32_MIN;
 
 //    /* add the bounded yaw command and scale */
-//    for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
+    for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
 //      motor_mixing.commands[i] += yaw_coef[i] * bounded_yaw_cmd;
-//      motor_mixing.commands[i] /= MOTOR_MIXING_SCALE;
+      motor_mixing.commands[i] /= MOTOR_MIXING_SCALE;
 
       /* remember min/max */
       if (motor_mixing.commands[i] < min_cmd) {
