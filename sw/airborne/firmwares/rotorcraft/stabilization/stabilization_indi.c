@@ -271,35 +271,35 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //---------------------------------------------------------------------
   //---------------------------------------------------------------------
 
-  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
-  float B_tmp[3][4] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}}; // (Temporary) Control effectiveness matrix
+//  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
+//  float B_tmp[3][4] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}}; // (Temporary) Control effectiveness matrix
 
     // Actually define the Control Effectiveness		   
-  float** B = (float**)calloc(3, sizeof(float*)); 
-    for (int i = 0; i < 3; i++) {
-        B[i] = (float*)calloc(4, sizeof(float*));
-        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
-    }
+//  float** B = (float**)calloc(3, sizeof(float*)); 
+//    for (int i = 0; i < 3; i++) {
+//        B[i] = (float*)calloc(4, sizeof(float*));
+//        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
+//    }
 
     // Maximum and minimum actuator deflections
-    float umax[4] = {12000, 12000, 12000, 12000};
-    float umin[4] = {3000, 3000, 3000, 3000};
-    int32_t wls_to_motor[4] = {0, 0, 0, 0}; // to actuators
+//    float umax[4] = {12000, 12000, 12000, 12000};
+//    float umin[4] = {3000, 3000, 3000, 3000};
+//   int32_t wls_to_motor[4] = {0, 0, 0, 0}; // to actuators
 
     // Control objective v
-    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
+//    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
 
     // Current actuator state
     float u[4] = {actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3]};
 
     // Call wls control allocator
-    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+//    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
 
     // Export to motor mixing (actuators)
-    wls_to_motor[0] = (int32_t) u[0];
-    wls_to_motor[1] = (int32_t) u[1];
-    wls_to_motor[2] = (int32_t) u[2];
-    wls_to_motor[3] = (int32_t) u[3];	
+//    wls_to_motor[0] = (int32_t) u[0];
+//    wls_to_motor[1] = (int32_t) u[1];
+//    wls_to_motor[2] = (int32_t) u[2];
+//    wls_to_motor[3] = (int32_t) u[3];	
 	
     // Ewoud approved method
     // indi_du_in_actuators[0] = (G1G2_pseudo_inv[0][0] * (angular_accel_ref.p - filtered_rate_deriv.p)) + (G1G2_pseudo_inv[0][1] * (angular_accel_ref.q - filtered_rate_deriv.q)) + (G1G2_pseudo_inv[0][2] * (angular_accel_ref.r - filtered_rate_deriv.r + G2_times_du));
@@ -309,30 +309,30 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     //    printf("%.2f\n", u[i]);
     //return 0;
 
- printf("u = \n");
- printf("-----------------\n");
-  /* Display contents of an n vector. */
-	int i;
-	printf("[ ");
-	for (i=0 ; i < 4 ; i++)
-	  	printf("%8.3g ",u[i]);
-        printf("]\n");
-printf("-----------------\n");
-
+// printf("u = \n");
+// printf("-----------------\n");
+// /* Display contents of an n vector. */
+//	int i;
+//	printf("[ ");
+//	for (i=0 ; i < 4 ; i++)
+//	  	printf("%8.3g ",u[i]);
+//        printf("]\n");
+//printf("-----------------\n");
+//
 //display contents of the matrix
- printf("B_tmp = \n");
- printf("-----------------\n");
-	  i = 0;
-	  int j = 0;
-	    for (i=0 ; i < 3; i++) {
-		if (i==0) printf("[ ");
-		else printf("  ");
-		for (j=0 ; j < 4; j++)
-		  printf("%8.3g ",B_tmp[i][j]);
-		if (i<2) printf("\n");
-		 else printf("]\n");
-	}
- printf("-----------------\n");
+// printf("B_tmp = \n");
+// printf("-----------------\n");
+//	  i = 0;
+//	  int j = 0;
+//	    for (i=0 ; i < 3; i++) {
+//		if (i==0) printf("[ ");
+//		else printf("  ");
+//		for (j=0 ; j < 4; j++)
+//		  printf("%8.3g ",B_tmp[i][j]);
+//		if (i<2) printf("\n");
+//		 else printf("]\n");
+//	}
+// printf("-----------------\n");
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
