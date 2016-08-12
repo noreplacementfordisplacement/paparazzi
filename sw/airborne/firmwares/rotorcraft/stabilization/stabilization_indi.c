@@ -56,7 +56,7 @@
 
 // these parameters are used in the filtering of the angular acceleration
 // define them in the airframe file if different values are required
-#ifndef STABILIZATION_INDI_FILT_OMEGA
+ifndef STABILIZATION_INDI_FILT_OMEGA
 #define STABILIZATION_INDI_FILT_OMEGA 50.0
 #endif
 
@@ -106,6 +106,7 @@ static inline void lms_estimation(void);
 float u_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udotdot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
+float u_act_dyn_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 
 #define INDI_EST_SCALE 0.001 //The G values are scaled to avoid numerical problems during the estimation
 struct IndiVariables indi = {
