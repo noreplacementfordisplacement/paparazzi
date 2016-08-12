@@ -373,10 +373,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   u_cmd[2] = u[2]  + u_fb[2]; 
   u_cmd[3] = u[3]  + u_fb[3];
 
-	printf("\n-----------THIS IS WLS------------");
-    for(int i = 0; i < 4; i++)
-        printf("%.2f____", u_cmd[i]);
-    return 0;
+//	printf("\n-----------THIS IS WLS------------");
+//    for(int i = 0; i < 4; i++)
+//        printf("%.2f____", u_cmd[i]);
+//    return 0;
 
 // printf("u = \n");
 // printf("-----------------\n");
@@ -489,9 +489,9 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
 //	----------------------
 
 //	printf("::::::::::::::::::::::::::::::::::\n");
-//	printf("%d\n", stabilization_cmd[COMMAND_ROLL]);
-//	printf("%d\n", stabilization_cmd[COMMAND_PITCH]);
-//	printf("%d\n", stabilization_cmd[COMMAND_YAW]);
+	printf("%d\n", stabilization_cmd[COMMAND_ROLL]);
+	printf("%d\n", stabilization_cmd[COMMAND_PITCH]);
+	printf("%d\n", stabilization_cmd[COMMAND_YAW]);
 //	printf("::::::::::::::::::::::::::::::::::\n");
 }
 
