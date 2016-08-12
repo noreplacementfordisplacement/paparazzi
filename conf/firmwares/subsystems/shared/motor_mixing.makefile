@@ -17,3 +17,8 @@
 $(TARGET).CFLAGS += -DUSE_MOTOR_MIXING
 $(TARGET).srcs   += subsystems/actuators/motor_mixing.c
 
+
+# ADD WLS CONTROL ALLOCATOR
+#$(TARGET).srcs += subsystems/actuators/wls/wls_alloc.c
+#$(TARGET).srcs += subsystems/actuators/wls/qr_solve.c
+#$(TARGET).srcs += subsystems/actuators/wls/r8lib.c

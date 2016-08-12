@@ -361,23 +361,23 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //
 //display contents of the matrix
 // printf("B_tmp = \n");
- printf("-----------------\n");
+// printf("-----------------\n");
 //	  i = 0;
 //	  int j = 0;
 //	    for (i=0 ; i < 3; i++) {
 //		if (i==0) printf("[ ");
 //		else printf("  ");
 //		for (j=0 ; j < 4; j++)
-		 printf("%d\n",stabilization_cmd[COMMAND_THRUST]);
+//		 printf("%d\n",stabilization_cmd[COMMAND_THRUST]);
 //		 printf("%8.3g\n",COMMAND_PITCH);
 //		if (i<2) printf("\n");
 //		 else printf("]\n");
-		printf("____%8.3g",u_actuators[0]);
-		printf("____%8.3g",u_actuators[1]);
-		printf("____%8.3g",u_actuators[2]);
-		printf("____%8.3g\n",u_actuators[3]);
+//		printf("____%8.3g",u_actuators[0]);
+//		printf("____%d",actuators_bebop.rpm_obs[0]);
+//		printf("____%8.3g",u_actuators[2]);
+//		printf("____%8.3g\n",u_actuators[3]);
 //	}
- printf("-----------------\n");
+// printf("-----------------\n");
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
@@ -446,6 +446,19 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_cmd[COMMAND_ROLL] = stabilization_att_indi_cmd[COMMAND_ROLL];
   stabilization_cmd[COMMAND_PITCH] = stabilization_att_indi_cmd[COMMAND_PITCH];
   stabilization_cmd[COMMAND_YAW] = stabilization_att_indi_cmd[COMMAND_YAW];
+
+//	----------------------
+//	----------------------
+//      PRINT THE OUTPUT MOTOR COMMANDS
+//	----------------------
+//	----------------------
+
+	printf("::::::::::::::::::::::::::::::::::\n");
+	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
+	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
+	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
+	printf("::::::::::::::::::::::::::::::::::\n");
+
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
