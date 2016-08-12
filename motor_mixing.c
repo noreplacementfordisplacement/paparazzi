@@ -1,4 +1,5 @@
-/*Copyright (C) 2008-2012 The Paparazzi Team
+/*
+ * Copyright (C) 2008-2012 The Paparazzi Team
  *
  * This file is part of Paparazzi.
  *
@@ -268,4 +269,3 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
     }
   }
 }
-

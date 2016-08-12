@@ -45,10 +45,15 @@
 #include "subsystems/commands.h"
 
 // WLS Control allocator libraries
-// #include "wls/wls_alloc.h"
+ #include "wls/wls_alloc.h"
 // #include "wls/qr_solve.h"
 // #include "wls/r8lib.h"
 #include <stdio.h>
+
+#define MAX_MOTOR_WLS 9000
+#define MIN_MOTOR_WLS 3000
+#define MARINUS 3
+#define NICO 4
 
 #if !defined(STABILIZATION_INDI_ACT_DYN_P) && !defined(STABILIZATION_INDI_ACT_DYN_Q) && !defined(STABILIZATION_INDI_ACT_DYN_R)
 #error You have to define the first order time constant of the actuator dynamics!
@@ -287,24 +292,6 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //---------------------------------------------------------------------
   //---------------------------------------------------------------------
 
-//  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
-//  float B_tmp[3][4] = {{-21.5189e-3, 21.5189e-3, 21.5189e-3, -21.5189e-3},{14.3894e-3, 14.3894e-3, -14.3894e-3, -14.3894e-3},{ 1.2538e-3,  -1.2538e-3, 1.2538e-3, -1.2538e-3}}; // (Temporary) Control effectiveness matrix
-
-    // Actually define the Control Effectiveness		   
-//  float** B = (float**)calloc(3, sizeof(float*)); 
-//    for (int i = 0; i < 3; i++) {
-//        B[i] = (float*)calloc(4, sizeof(float*));
-//        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
-//    }
-
-    // Maximum and minimum actuator deflections
-//    float umax[4] = {12000, 12000, 12000, 12000};
-//    float umin[4] = {3000, 3000, 3000, 3000};
-//   int32_t wls_to_motor[4] = {0, 0, 0, 0}; // to actuators
-
-    // Control objective v
-//    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
-
     // Current actuator state (RPM FB)
    u_act_dyn_actuators[0] = actuators_bebop.rpm_obs[0];
    u_act_dyn_actuators[1] = actuators_bebop.rpm_obs[1];
@@ -331,23 +318,65 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 
    udotdot_actuators[3] = -udot_actuators[3] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_actuators[3])*STABILIZATION_INDI_FILT_OMEGA2;
 
+  // create feedback actuator state for wls control allocator
+  float u_fb[4] = {0.0 , 0.0 , 0.0, 0.0};
 
+  // WLS min motor
+  u_fb[0] = u_actuators[0] - MIN_MOTOR_WLS;
+  u_fb[1] = u_actuators[1] - MIN_MOTOR_WLS;
+  u_fb[2] = u_actuators[2] - MIN_MOTOR_WLS;
+  u_fb[3] = u_actuators[3] - MIN_MOTOR_WLS;
+
+  //bound the total control input
+  Bound(u_fb[0], 0, MAX_MOTOR_WLS);
+  Bound(u_fb[1], 0, MAX_MOTOR_WLS);
+  Bound(u_fb[2], 0, MAX_MOTOR_WLS);
+  Bound(u_fb[3], 0, MAX_MOTOR_WLS);
+  
+  float umin[4] = {0.0 , 0.0, 0.0, 0.0};
+  umin[0] = -u_fb[0]; 
+  umin[1] = -u_fb[1]; 
+  umin[2] = -u_fb[2]; 
+  umin[3] = -u_fb[3];
+   
+  float umax[4] = {9000, 9000, 9000, 9000};
+  umax[0] = MAX_MOTOR_WLS - u_fb[0];
+  umax[1] = MAX_MOTOR_WLS - u_fb[1];
+  umax[2] = MAX_MOTOR_WLS - u_fb[2];
+  umax[3] = MAX_MOTOR_WLS - u_fb[3];
+
+  float u[4] = {0.0, 0.0, 0.0, 0.0};
+
+  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
+  float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix
+
+ //  Actually define the Control Effectiveness (necessary for **DOUBLE ARRAY input
+  float** B = (float**)calloc(3, sizeof(float*)); 
+    for (int i = 0; i < 3; i++) {
+        B[i] = (float*)calloc(4, sizeof(float*));
+        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
+    }
+
+  // CONTROL OBJECTIVE V
+  float v[3] = {0, 0, 0};
+
+ v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p);
+ v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q);
+ v[2]  = (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r);
+  
     // Call wls control allocator
-//    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
 
-    // Export to motor mixing (actuators)
-//    wls_to_motor[0] = (int32_t) u[0];
-//    wls_to_motor[1] = (int32_t) u[1];
-//    wls_to_motor[2] = (int32_t) u[2];
-//    wls_to_motor[3] = (int32_t) u[3];	
-	
-    // Ewoud approved method
-    // indi_du_in_actuators[0] = (G1G2_pseudo_inv[0][0] * (angular_accel_ref.p - filtered_rate_deriv.p)) + (G1G2_pseudo_inv[0][1] * (angular_accel_ref.q - filtered_rate_deriv.q)) + (G1G2_pseudo_inv[0][2] * (angular_accel_ref.r - filtered_rate_deriv.r + G2_times_du));
+  float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
+  u_cmd[0] = u[0] + u_fb[0]; 
+  u_cmd[1] = u[1] + u_fb[1]; 
+  u_cmd[2] = u[2]  + u_fb[2]; 
+  u_cmd[3] = u[3]  + u_fb[3];
 
-
-    //for(int i = 0; i < 4; i++)
-    //    printf("%.2f\n", u[i]);
-    //return 0;
+	printf("\n-----------THIS IS WLS------------");
+    for(int i = 0; i < 4; i++)
+        printf("%.2f____", u_cmd[i]);
+    return 0;
 
 // printf("u = \n");
 // printf("-----------------\n");
@@ -447,23 +476,23 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_cmd[COMMAND_PITCH] = stabilization_att_indi_cmd[COMMAND_PITCH];
   stabilization_cmd[COMMAND_YAW] = stabilization_att_indi_cmd[COMMAND_YAW];
 
+
+  /* bound the result */
+  BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
+
 //	----------------------
 //	----------------------
 //      PRINT THE OUTPUT MOTOR COMMANDS
 //	----------------------
 //	----------------------
 
-	printf("::::::::::::::::::::::::::::::::::\n");
-	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
-	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
-	printf("%d\n,stabilization_cmd[COMMAND_ROLL]");
-	printf("::::::::::::::::::::::::::::::::::\n");
-
-
-  /* bound the result */
-  BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
+//	printf("::::::::::::::::::::::::::::::::::\n");
+//	printf("%d\n", stabilization_cmd[COMMAND_ROLL]);
+//	printf("%d\n", stabilization_cmd[COMMAND_PITCH]);
+//	printf("%d\n", stabilization_cmd[COMMAND_YAW]);
+//	printf("::::::::::::::::::::::::::::::::::\n");
 }
 
 // This function reads rc commands

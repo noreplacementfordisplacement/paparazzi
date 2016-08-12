@@ -1,4 +1,5 @@
-/*Copyright (C) 2008-2012 The Paparazzi Team
+/*
+ * Copyright (C) 2008-2012 The Paparazzi Team
  *
  * This file is part of Paparazzi.
  *
@@ -26,6 +27,13 @@
 
 #include "subsystems/actuators/motor_mixing.h"
 #include "paparazzi.h"
+#include <stdio.h>
+
+//wls allocator
+//#include "subsystems/actuators/wls_alloc/wls_alloc.h"
+
+#define MARINUS 4
+#define NICO 4
 
 //#include <stdint.h>
 #ifndef INT32_MIN
@@ -189,38 +197,40 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
      * - add trim + roll + pitch + thrust for each motor
      * - calc max saturation/overflow when yaw command is also added
      */
+//	float v = {in_cmd[COMMAND_ROLL], in_cmd[COMMAND_PITCH], in_cmd[COMMAND_YAW]
+
     for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
       motor_mixing.commands[i] = motor_mixing.trim[i] +
         roll_coef[i] * in_cmd[COMMAND_ROLL] +
         pitch_coef[i] * in_cmd[COMMAND_PITCH] +
-        thrust_coef[i] * in_cmd[COMMAND_THRUST];
+        thrust_coef[i] * in_cmd[COMMAND_THRUST] + yaw_coef[i] * in_cmd[COMMAND_YAW]; //FIXME: ADDED YAW COMMAND!!
 
       /* compute the command with yaw for each motor to check how much it would saturate */
-      tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];
-      tmp_cmd /= MOTOR_MIXING_SCALE;
+//      tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];
+//      tmp_cmd /= MOTOR_MIXING_SCALE;
 
-      /* remember max overflow (how much in saturation) */
-      if (-tmp_cmd > max_overflow) {
-        max_overflow = -tmp_cmd;
-      }
-      else if (tmp_cmd - MAX_PPRZ > max_overflow) {
-        max_overflow = tmp_cmd - MAX_PPRZ;
-      }
-    }
+//    /* remember max overflow (how much in saturation) */
+//      if (-tmp_cmd > max_overflow) {
+//       max_overflow = -tmp_cmd;
+//      }
+//      else if (tmp_cmd - MAX_PPRZ > max_overflow) {
+//        max_overflow = tmp_cmd - MAX_PPRZ;
+//      }
+    } //FIXME: END FOR LOOP
 
-    /* calculate how much authority is left for yaw command */
-    int32_t yaw_authority = ABS(in_cmd[COMMAND_YAW]) - max_overflow;
-    Bound(yaw_authority, 0, MAX_PPRZ);
-    int32_t bounded_yaw_cmd = in_cmd[COMMAND_YAW];
-    BoundAbs(bounded_yaw_cmd, yaw_authority);
-
+//    /* calculate how much authority is left for yaw command */
+//    int32_t yaw_authority = ABS(in_cmd[COMMAND_YAW]) - max_overflow;
+//    Bound(yaw_authority, 0, MAX_PPRZ);
+//    int32_t bounded_yaw_cmd = in_cmd[COMMAND_YAW];
+//    BoundAbs(bounded_yaw_cmd, yaw_authority);
+//
     /* min/max of commands */
     int32_t min_cmd = INT32_MAX;
     int32_t max_cmd = INT32_MIN;
 
-    /* add the bounded yaw command and scale */
+//    /* add the bounded yaw command and scale */
     for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
-      motor_mixing.commands[i] += yaw_coef[i] * bounded_yaw_cmd;
+//      motor_mixing.commands[i] += yaw_coef[i] * bounded_yaw_cmd;
       motor_mixing.commands[i] /= MOTOR_MIXING_SCALE;
 
       /* remember min/max */
@@ -231,7 +241,6 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
         max_cmd = motor_mixing.commands[i];
       }
     }
-
     if (min_cmd < MOTOR_MIXING_MIN_MOTOR && max_cmd > MOTOR_MIXING_MAX_MOTOR) {
       motor_mixing.nb_failure++;
     }
@@ -252,6 +261,15 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       motor_mixing.nb_saturation++;
     }
 
+
+// 	Motor mixing prints
+//	printf("-----------------\n");
+//	printf("%d\n",	motor_mixing.commands[0]);
+//	printf("%d\n",	motor_mixing.commands[1]);
+//	printf("%d\n",	motor_mixing.commands[2]);
+//	printf("%d\n",	motor_mixing.commands[3]);
+//	printf("-----------------\n");
+
     /* For testing motor failure */
     if (motors_on && override_on) {
       for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
@@ -268,4 +286,3 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
     }
   }
 }
-
