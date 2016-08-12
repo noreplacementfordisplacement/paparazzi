@@ -56,9 +56,11 @@
 
 // these parameters are used in the filtering of the angular acceleration
 // define them in the airframe file if different values are required
-ifndef STABILIZATION_INDI_FILT_OMEGA
+#ifndef STABILIZATION_INDI_FILT_OMEGA
 #define STABILIZATION_INDI_FILT_OMEGA 50.0
 #endif
+
+#define STABILIZATION_INDI_FILT_OMEGA2 (STABILIZATION_INDI_FILT_OMEGA*STABILIZATION_INDI_FILT_OMEGA)
 
 #ifndef STABILIZATION_INDI_FILT_ZETA
 #define STABILIZATION_INDI_FILT_ZETA 0.55
@@ -310,10 +312,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
    u_act_dyn_actuators[3] = actuators_bebop.rpm_obs[3];
 
 // For some reason this is necessary
-   u_actuators[0] = u_act_dyn_actuators[0]
-   u_actuators[1] = u_act_dyn_actuators[1]
-   u_actuators[2] = u_act_dyn_actuators[2]
-   u_actuators[3] = u_act_dyn_actuators[3]
+   u_actuators[0] = u_act_dyn_actuators[0];
+   u_actuators[1] = u_act_dyn_actuators[1];
+   u_actuators[2] = u_act_dyn_actuators[2];
+   u_actuators[3] = u_act_dyn_actuators[3];
 
     // Filter actuators
     VECT4_INTEGRATE(u_actuators,udot_actuators,512.0);
@@ -370,6 +372,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //		 printf("%8.3g\n",COMMAND_PITCH);
 //		if (i<2) printf("\n");
 //		 else printf("]\n");
+		printf("____%8.3g",u_actuators[0]);
+		printf("____%8.3g",u_actuators[1]);
+		printf("____%8.3g",u_actuators[2]);
+		printf("____%8.3g\n",u_actuators[3]);
 //	}
  printf("-----------------\n");
 
