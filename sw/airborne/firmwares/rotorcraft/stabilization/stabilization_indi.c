@@ -45,7 +45,7 @@
 #include "subsystems/commands.h"
 
 // WLS Control allocator libraries
-#include "wls/wls_alloc.h"
+// #include "wls/wls_alloc.h"
 // #include "wls/qr_solve.h"
 // #include "wls/r8lib.h"
 #include <stdio.h>
@@ -85,6 +85,13 @@
 #define STABILIZATION_INDI_MAX_R STABILIZATION_ATTITUDE_SP_MAX_R
 #endif
 
+#define VECT4_INTEGRATE(_a, _b, _c) { \
+_a[0] = _a[0] + _b[0]/_c; \
+_a[1] = _a[1] + _b[1]/_c; \
+_a[2] = _a[2] + _b[2]/_c; \
+_a[3] = _a[3] + _b[3]/_c; \
+}
+
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat   stab_att_sp_quat;
 
@@ -93,6 +100,12 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 static void stabilization_indi_second_order_filter_init(struct IndiFilter *filter, float omega, float zeta, float omega_r);
 static void stabilization_indi_second_order_filter(struct IndiFilter *filter, struct FloatRates *input);
 static inline void lms_estimation(void);
+
+
+//Actuator filter
+float u_actuators[4] = {0.0, 0.0, 0.0, 0.0};
+float udot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
+float udotdot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 
 #define INDI_EST_SCALE 0.001 //The G values are scaled to avoid numerical problems during the estimation
 struct IndiVariables indi = {
@@ -289,8 +302,32 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     // Control objective v
 //    float v[3] = {indi.du.p, indi.du.q, indi.du.r};
 
-    // Current actuator state
-//    float u[4] = {actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3]};
+    // Current actuator state (RPM FB)
+   u_act_dyn_actuators[0] = actuators_bebop.rpm_obs[0];
+   u_act_dyn_actuators[1] = actuators_bebop.rpm_obs[1];
+   u_act_dyn_actuators[2] = actuators_bebop.rpm_obs[2];
+   u_act_dyn_actuators[3] = actuators_bebop.rpm_obs[3];
+
+// For some reason this is necessary
+   u_actuators[0] = u_act_dyn_actuators[0]
+   u_actuators[1] = u_act_dyn_actuators[1]
+   u_actuators[2] = u_act_dyn_actuators[2]
+   u_actuators[3] = u_act_dyn_actuators[3]
+
+    // Filter actuators
+    VECT4_INTEGRATE(u_actuators,udot_actuators,512.0);
+
+    VECT4_INTEGRATE(udot_actuators,udotdot_actuators,512.0);
+    
+    // Update filter states
+   udotdot_actuators[0] = -udot_actuators[0] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[0] - u_actuators[0])*STABILIZATION_INDI_FILT_OMEGA2;
+
+    udotdot_actuators[1] = -udot_actuators[1] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[1] - u_actuators[1])*STABILIZATION_INDI_FILT_OMEGA2;
+
+   udotdot_actuators[2] = -udot_actuators[2] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[2] - u_actuators[2])*STABILIZATION_INDI_FILT_OMEGA2;
+
+   udotdot_actuators[3] = -udot_actuators[3] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_actuators[3])*STABILIZATION_INDI_FILT_OMEGA2;
+
 
     // Call wls control allocator
 //    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
@@ -328,8 +365,8 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //		if (i==0) printf("[ ");
 //		else printf("  ");
 //		for (j=0 ; j < 4; j++)
-		 printf("%8.3g\n",COMMAND_THRUST);
-		 printf("%8.3g\n",COMMAND_PITCH);
+		 printf("%d\n",stabilization_cmd[COMMAND_THRUST]);
+//		 printf("%8.3g\n",COMMAND_PITCH);
 //		if (i<2) printf("\n");
 //		 else printf("]\n");
 //	}
