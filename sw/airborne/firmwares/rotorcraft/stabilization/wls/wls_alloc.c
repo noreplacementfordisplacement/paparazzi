@@ -37,7 +37,7 @@ int wls_alloc(float* u, float* v, float* umin, float* umax, float** B,
     int free_chk = -1;
 
     // provide loop feedback 
-    int verbose = 1;
+    int verbose = 0;
 
     int iter = 0;
     float* p_free;

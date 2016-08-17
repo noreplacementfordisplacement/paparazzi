@@ -370,9 +370,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
   u_cmd[0] = u[0] + u_fb[0]; 
   u_cmd[1] = u[1] + u_fb[1]; 
-  u_cmd[2] = u[2]  + u_fb[2]; 
-  u_cmd[3] = u[3]  + u_fb[3];
+  u_cmd[2] = u[2] + u_fb[2]; 
+  u_cmd[3] = u[3] + u_fb[3];
 
+ 
 //	printf("\n-----------THIS IS WLS------------");
 //    for(int i = 0; i < 4; i++)
 //        printf("%.2f____", u_cmd[i]);
@@ -456,6 +457,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi_commands[COMMAND_ROLL] = indi.u_in.p;
   indi_commands[COMMAND_PITCH] = indi.u_in.q;
   indi_commands[COMMAND_YAW] = indi.u_in.r;
+  indi_commands[COMMAND_WLS_1] =  (int32_t) u_cmd[0];    
+  indi_commands[COMMAND_WLS_2] =  (int32_t) u_cmd[1];
+  indi_commands[COMMAND_WLS_3] =  (int32_t) u_cmd[2];
+  indi_commands[COMMAND_WLS_4] =  (int32_t) u_cmd[3];
 }
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
@@ -472,10 +477,17 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_indi_calc_cmd(stabilization_att_indi_cmd, &att_err, rate_control);
 
   /* copy the INDI command */
-  stabilization_cmd[COMMAND_ROLL] = stabilization_att_indi_cmd[COMMAND_ROLL];
+  stabilization_cmd[COMMAND_ROLL] =  stabilization_att_indi_cmd[COMMAND_ROLL];
   stabilization_cmd[COMMAND_PITCH] = stabilization_att_indi_cmd[COMMAND_PITCH];
-  stabilization_cmd[COMMAND_YAW] = stabilization_att_indi_cmd[COMMAND_YAW];
+  stabilization_cmd[COMMAND_YAW] =   stabilization_att_indi_cmd[COMMAND_YAW];
 
+ //  WLS control allocator functions
+  stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1]; 
+  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
+  stabilization_cmd[COMMAND_WLS_3] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
+  stabilization_cmd[COMMAND_WLS_4] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
+	
+ 
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
@@ -488,11 +500,11 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
 //	----------------------
 //	----------------------
 
-//	printf("::::::::::::::::::::::::::::::::::\n");
-	printf("%d\n", stabilization_cmd[COMMAND_ROLL]);
-	printf("%d\n", stabilization_cmd[COMMAND_PITCH]);
-	printf("%d\n", stabilization_cmd[COMMAND_YAW]);
-//	printf("::::::::::::::::::::::::::::::::::\n");
+	printf("::::::::::::::::::::::::::::::::::\n");
+	printf("%d\n", stabilization_cmd[COMMAND_WLS_1]);
+	printf("%d\n", stabilization_cmd[COMMAND_WLS_2]);
+	printf("%d\n", stabilization_cmd[COMMAND_WLS_3]);
+	printf("::::::::::::::::::::::::::::::::::\n");
 }
 
 // This function reads rc commands

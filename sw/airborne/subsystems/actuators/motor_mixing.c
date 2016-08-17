@@ -26,6 +26,8 @@
 
 #include "subsystems/actuators/motor_mixing.h"
 #include "paparazzi.h"
+// for printf's
+#include <stdio.h>
 
 //#include <stdint.h>
 #ifndef INT32_MIN
@@ -92,17 +94,20 @@ static const int32_t thrust_coef[MOTOR_MIXING_NB_MOTOR] = MOTOR_MIXING_THRUST_CO
 
 struct MotorMixing motor_mixing;
 
+//void motor_mixing_init(void) (OLD)
 void motor_mixing_init(void)
 {
   uint8_t i;
+ 
   for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
     motor_mixing.commands[i] = 0;
     motor_mixing.trim[i] =
       roll_coef[i]  * MOTOR_MIXING_TRIM_ROLL +
       pitch_coef[i] * MOTOR_MIXING_TRIM_PITCH +
       yaw_coef[i]   * MOTOR_MIXING_TRIM_YAW;
-    motor_mixing.override_enabled[i] = false;
-    motor_mixing.override_value[i] = MOTOR_MIXING_STOP_MOTOR;
+    motor_mixing.override_enabled[i] = false; //should be false
+	//edited for wls_override
+    motor_mixing.override_value[i] = MOTOR_MIXING_MIN_MOTOR;
   }
   motor_mixing.nb_failure = 0;
   motor_mixing.nb_saturation = 0;
@@ -254,9 +259,24 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
 
     /* For testing motor failure */
     if (motors_on && override_on) {
+	 //introduce wls_override to directly access motors
+   int32_t wls_override[4] = {0, 0, 0, 0};
+	//allocate wls_override to in_cmd etc.
+	wls_override[0] = in_cmd[COMMAND_WLS_1];
+	wls_override[1] = in_cmd[COMMAND_WLS_2];
+	wls_override[2] = in_cmd[COMMAND_WLS_3];
+	wls_override[3] = in_cmd[COMMAND_WLS_4];
       for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
         if (motor_mixing.override_enabled[i]) {
-          motor_mixing.commands[i] = motor_mixing.override_value[i];
+//         motor_mixing.commands[i] = motor_mixing.override_value[i]; OLD ORIGINAL
+//          WLS OVERRIDE
+	   motor_mixing.commands[i] = wls_override[i];
+	   
+	   printf("override = on");
+	  // printf("m %d",i);
+	  // printf("wls: %d",wls_override[i]);
+		//extra space
+	
         }
       }
     }
