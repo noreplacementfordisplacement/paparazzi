@@ -50,6 +50,7 @@
 // #include "wls/r8lib.h"
 #include <stdio.h>
 
+// WLS defines
 #define MAX_MOTOR_WLS 9000
 #define MIN_MOTOR_WLS 3000
 #define MARINUS 3
@@ -102,6 +103,8 @@ _a[3] = _a[3] + _b[3]/_c; \
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat   stab_att_sp_quat;
 
+int32_t in_cmd_wls[4]; // \!/ JERRYRIG to motor_mixing.c
+
 static int32_t stabilization_att_indi_cmd[COMMANDS_NB];
 static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct Int32Quat *att_err, bool rate_control);
 static void stabilization_indi_second_order_filter_init(struct IndiFilter *filter, float omega, float zeta, float omega_r);
@@ -118,7 +121,7 @@ float u_act_dyn_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 #define INDI_EST_SCALE 0.001 //The G values are scaled to avoid numerical problems during the estimation
 struct IndiVariables indi = {
   .max_rate = STABILIZATION_INDI_MAX_RATE,
-  .attitude_max_yaw_rate = STABILIZATION_INDI_MAX_R,
+  .attitude_max_yaw_rate = STABILIZATION_INDI_MAX_RATE,
 
   .g1 = {STABILIZATION_INDI_G1_P, STABILIZATION_INDI_G1_Q, STABILIZATION_INDI_G1_R},
   .g2 = STABILIZATION_INDI_G2_R,
@@ -339,15 +342,16 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   umin[2] = -u_fb[2]; 
   umin[3] = -u_fb[3];
    
-  float umax[4] = {9000, 9000, 9000, 9000};
+  float umax[4] = {MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS};
   umax[0] = MAX_MOTOR_WLS - u_fb[0];
   umax[1] = MAX_MOTOR_WLS - u_fb[1];
   umax[2] = MAX_MOTOR_WLS - u_fb[2];
   umax[3] = MAX_MOTOR_WLS - u_fb[3];
 
+  // input u (output of WLS controller)
   float u[4] = {0.0, 0.0, 0.0, 0.0};
 
-  float Wv[3] = {3, 3, 1}; //State prioritization {W Roll, W pitch, W yaw}
+  float Wv[3] = {10, 10, 1}; //State prioritization {W Roll, W pitch, W yaw}
   float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix
 
  //  Actually define the Control Effectiveness (necessary for **DOUBLE ARRAY input
@@ -360,20 +364,28 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   // CONTROL OBJECTIVE V
   float v[3] = {0, 0, 0};
 
- v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p);
- v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q);
- v[2]  = (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r);
+  v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p);
+  v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q);
+  v[2]  = (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r); //this needs to be edited using the output of the WLS CA
   
-    // Call wls control allocator
-    wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+  // Call wls control allocator
+  wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
 
+  // Add wls command to *filtered* actuator feedback
   float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
-  u_cmd[0] = u[0] + u_fb[0]; 
+
+  // If everything is correct this can be used as direct actuator input
+  u_cmd[0] = u[0] + u_fb[0];
   u_cmd[1] = u[1] + u_fb[1]; 
   u_cmd[2] = u[2] + u_fb[2]; 
   u_cmd[3] = u[3] + u_fb[3];
 
- 
+  //VERIFY ACTUATOR FEEDBACK
+//  u_cmd[0] = u_fb[0];
+//  u_cmd[1] = u_fb[1];
+//  u_cmd[2] = u_fb[2]; 
+//  u_cmd[3] = u_fb[3];
+
 //	printf("\n-----------THIS IS WLS------------");
 //    for(int i = 0; i < 4; i++)
 //        printf("%.2f____", u_cmd[i]);
@@ -457,10 +469,11 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi_commands[COMMAND_ROLL] = indi.u_in.p;
   indi_commands[COMMAND_PITCH] = indi.u_in.q;
   indi_commands[COMMAND_YAW] = indi.u_in.r;
-  indi_commands[COMMAND_WLS_1] =  (int32_t) u_cmd[0];    
-  indi_commands[COMMAND_WLS_2] =  (int32_t) u_cmd[1];
-  indi_commands[COMMAND_WLS_3] =  (int32_t) u_cmd[2];
-  indi_commands[COMMAND_WLS_4] =  (int32_t) u_cmd[3];
+  indi_commands[COMMAND_WLS_1] = u_cmd[0]; //u_cmd[0];   // previously with (int32_t) cast
+//  printf("check: %d zzzz \n", indi_commands[COMMAND_WLS_1]);
+  indi_commands[COMMAND_WLS_2] = u_cmd[1];
+  indi_commands[COMMAND_WLS_3] = u_cmd[2];
+  indi_commands[COMMAND_WLS_4] = u_cmd[3];
 }
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
@@ -482,12 +495,17 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_cmd[COMMAND_YAW] =   stabilization_att_indi_cmd[COMMAND_YAW];
 
  //  WLS control allocator functions
-  stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1]; 
-  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
-  stabilization_cmd[COMMAND_WLS_3] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
-  stabilization_cmd[COMMAND_WLS_4] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
-	
- 
+ //  stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1];
+ //  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
+ //  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
+ //  stabilization_cmd[COMMAND_WLS_3] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
+ //  stabilization_cmd[COMMAND_WLS_4] =  stabilization_att_indi_cmd[COMMAND_WLS_3]; 
+
+  // \!/ ACHTUNG JERRYRIG!!!
+  in_cmd_wls[0]  =  stabilization_att_indi_cmd[COMMAND_WLS_1]; //cmd_wls
+  in_cmd_wls[1]  =  stabilization_att_indi_cmd[COMMAND_WLS_2];
+  in_cmd_wls[2]  =  stabilization_att_indi_cmd[COMMAND_WLS_3];
+  in_cmd_wls[3]  =  stabilization_att_indi_cmd[COMMAND_WLS_4];
 
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
@@ -500,11 +518,11 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
 //	----------------------
 //	----------------------
 
-	printf("::::::::::::::::::::::::::::::::::\n");
-	printf("%d\n", stabilization_cmd[COMMAND_WLS_1]);
-	printf("%d\n", stabilization_cmd[COMMAND_WLS_2]);
-	printf("%d\n", stabilization_cmd[COMMAND_WLS_3]);
-	printf("::::::::::::::::::::::::::::::::::\n");
+//	printf("::::::::::::::::::::::::::::::::::\n");
+//	printf("%d\n", stabilization_cmd[COMMAND_WLS_1]);
+//	printf("%d\n", stabilization_cmd[COMMAND_WLS_2]);
+//	printf("%d\n", stabilization_cmd[COMMAND_WLS_3]);
+//	printf("::::::::::::::::::::::::::::::::::\n");
 }
 
 // This function reads rc commands

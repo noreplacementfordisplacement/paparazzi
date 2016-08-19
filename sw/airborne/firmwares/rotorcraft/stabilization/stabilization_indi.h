@@ -88,6 +88,9 @@ struct IndiVariables {
 };
 
 
+// \!/ 	QUICK DIRTY FIX FOR WLS CA
+int32_t in_cmd_wls[4]; // #jerryrig to pass variables to motor_mixing
+
 extern struct IndiVariables indi;
 extern void stabilization_indi_init(void);
 extern void stabilization_indi_enter(void);
@@ -97,7 +100,7 @@ extern void stabilization_indi_set_earth_cmd_i(struct Int32Vect2 *cmd, int32_t h
 extern void stabilization_indi_run(bool enable_integrator, bool rate_control);
 extern void stabilization_indi_read_rc(bool in_flight, bool in_carefree, bool coordinated_turn);
 
-extern int32_t wls_to_motor[4]; // to motor_mixing.c
+//extern int32_t wls_to_motor[4]; // to motor_mixing.c
 
 #endif /* STABILIZATION_INDI_H */
 

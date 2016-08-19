@@ -37,16 +37,16 @@
   </modules>
 
   <commands>
+   <!-- WLS MESSAGES -->
+    <!-- originaLLY THIS SHOULD BE ON TOP!!!!! ERROR!! -->
     <axis name="PITCH" failsafe_value="0"/>
     <axis name="ROLL" failsafe_value="0"/>
     <axis name="YAW" failsafe_value="0"/>
     <axis name="THRUST" failsafe_value="6000"/>
-
-    <axis name="WLS_1" failsafe_value="0"/>
-    <axis name="WLS_2" failsafe_value="0"/>
-    <axis name="WLS_3" failsafe_value="0"/>
-    <axis name="WLS_4" failsafe_value="0"/>
-
+    <axis name="WLS_1" failsafe_value="40"/>
+    <axis name="WLS_2" failsafe_value="50"/>
+    <axis name="WLS_3" failsafe_value="60"/>
+    <axis name="WLS_4" failsafe_value="70"/>
   </commands>
 
   <servos driver="Default">
@@ -64,7 +64,7 @@
   </section>
 
   <command_laws>
-    <call fun="motor_mixing_run(autopilot_motors_on,FALSE,values)"/> <!-- should be FALSE --> 
+    <call fun="motor_mixing_run(autopilot_motors_on,TRUE,values)"/> <!-- should be FALSE --> 
     <set servo="TOP_LEFT" value="motor_mixing.commands[MOTOR_FRONT_LEFT]"/>
     <set servo="TOP_RIGHT" value="motor_mixing.commands[MOTOR_FRONT_RIGHT]"/>
     <set servo="BOTTOM_RIGHT" value="motor_mixing.commands[MOTOR_BACK_RIGHT]"/>
