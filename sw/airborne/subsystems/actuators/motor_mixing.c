@@ -106,7 +106,7 @@ void motor_mixing_init(void)
       roll_coef[i]  * MOTOR_MIXING_TRIM_ROLL +
       pitch_coef[i] * MOTOR_MIXING_TRIM_PITCH +
       yaw_coef[i]   * MOTOR_MIXING_TRIM_YAW;
-    motor_mixing.override_enabled[i] = true; //should be false
+    motor_mixing.override_enabled[i] = false; //should be false
 	//edited for wls_override
     motor_mixing.override_value[i] = MOTOR_MIXING_MIN_MOTOR;
   }
@@ -272,8 +272,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
            motor_mixing.commands[i] = motor_mixing.override_value[i]; //OLD ORIGINAL
 //         WLS OVERRIDE
 //	   motor_mixing.commands[i] = wls_override[i];
-	  //	   printf("override = on");
-	  	printf("m %d ",i);
+//	  	printf("m %d ",i);
 	   	printf("w_c: %d", wls_override[i]);
 		//extra space
 	   if (i == 3){

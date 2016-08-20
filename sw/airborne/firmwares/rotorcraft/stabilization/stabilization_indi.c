@@ -53,6 +53,7 @@
 // WLS defines
 #define MAX_MOTOR_WLS 9000
 #define MIN_MOTOR_WLS 3000
+//#define MARINUS 3 //OLD WORKING VERSION!
 #define MARINUS 3
 #define NICO 4
 
@@ -103,7 +104,11 @@ _a[3] = _a[3] + _b[3]/_c; \
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat   stab_att_sp_quat;
 
+//FIXME: UUUUUUH JERRYRIG is not exactly how it supposed to be innit?!
 int32_t in_cmd_wls[4]; // \!/ JERRYRIG to motor_mixing.c
+
+float wls_temp_thrust = 0; //FIXME test thrust command increment
+float wls_z1_thrust = 0;
 
 static int32_t stabilization_att_indi_cmd[COMMANDS_NB];
 static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct Int32Quat *att_err, bool rate_control);
@@ -113,6 +118,7 @@ static inline void lms_estimation(void);
 
 
 //Actuator filter
+//FIXME: DOES THIS ACTUALLY UPDATE ?!
 float u_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udotdot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
@@ -191,7 +197,8 @@ void stabilization_indi_enter(void)
 {
   /* reset psi setpoint to current psi angle */
   stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
-
+ 
+  //FIXME: Zero order hold?
   FLOAT_RATES_ZERO(indi.rate.x);
   FLOAT_RATES_ZERO(indi.rate.dx);
   FLOAT_RATES_ZERO(indi.rate.ddx);
@@ -295,34 +302,30 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //---------------------------------------------------------------------
   //---------------------------------------------------------------------
 
-    // Current actuator state (RPM FB)
+   // Current actuator state (RPM FB)
    u_act_dyn_actuators[0] = actuators_bebop.rpm_obs[0];
    u_act_dyn_actuators[1] = actuators_bebop.rpm_obs[1];
    u_act_dyn_actuators[2] = actuators_bebop.rpm_obs[2];
    u_act_dyn_actuators[3] = actuators_bebop.rpm_obs[3];
 
-// For some reason this is necessary
+   // For some reason this is necessary
    u_actuators[0] = u_act_dyn_actuators[0];
    u_actuators[1] = u_act_dyn_actuators[1];
    u_actuators[2] = u_act_dyn_actuators[2];
    u_actuators[3] = u_act_dyn_actuators[3];
 
     // Filter actuators
-    VECT4_INTEGRATE(u_actuators,udot_actuators,512.0);
-
-    VECT4_INTEGRATE(udot_actuators,udotdot_actuators,512.0);
+    VECT4_INTEGRATE(u_actuators, udot_actuators, 512.0);
+    VECT4_INTEGRATE(udot_actuators, udotdot_actuators, 512.0);
     
-    // Update filter states
+   // Update filter states
    udotdot_actuators[0] = -udot_actuators[0] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[0] - u_actuators[0])*STABILIZATION_INDI_FILT_OMEGA2;
-
-    udotdot_actuators[1] = -udot_actuators[1] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[1] - u_actuators[1])*STABILIZATION_INDI_FILT_OMEGA2;
-
+   udotdot_actuators[1] = -udot_actuators[1] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[1] - u_actuators[1])*STABILIZATION_INDI_FILT_OMEGA2;
    udotdot_actuators[2] = -udot_actuators[2] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[2] - u_actuators[2])*STABILIZATION_INDI_FILT_OMEGA2;
-
    udotdot_actuators[3] = -udot_actuators[3] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_actuators[3])*STABILIZATION_INDI_FILT_OMEGA2;
 
   // create feedback actuator state for wls control allocator
-  float u_fb[4] = {0.0 , 0.0 , 0.0, 0.0};
+  float u_fb[NICO] = {0.0 , 0.0 , 0.0, 0.0};
 
   // WLS min motor
   u_fb[0] = u_actuators[0] - MIN_MOTOR_WLS;
@@ -336,40 +339,51 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   Bound(u_fb[2], 0, MAX_MOTOR_WLS);
   Bound(u_fb[3], 0, MAX_MOTOR_WLS);
   
-  float umin[4] = {0.0 , 0.0, 0.0, 0.0};
+  float umin[NICO] = {0.0 , 0.0, 0.0, 0.0};
   umin[0] = -u_fb[0]; 
   umin[1] = -u_fb[1]; 
   umin[2] = -u_fb[2]; 
   umin[3] = -u_fb[3];
    
-  float umax[4] = {MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS};
+  float umax[NICO] = {MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS};
   umax[0] = MAX_MOTOR_WLS - u_fb[0];
   umax[1] = MAX_MOTOR_WLS - u_fb[1];
   umax[2] = MAX_MOTOR_WLS - u_fb[2];
   umax[3] = MAX_MOTOR_WLS - u_fb[3];
 
   // input u (output of WLS controller)
-  float u[4] = {0.0, 0.0, 0.0, 0.0};
+  float u[NICO] = {0.0, 0.0, 0.0, 0.0};
 
-  float Wv[3] = {10, 10, 1}; //State prioritization {W Roll, W pitch, W yaw}
-  float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix
+//  float Wv[3] = {10, 10, 1}; //State prioritization {W Roll, W pitch, W yaw} //OLD WORKING
+  float Wv[MARINUS] = {10, 10, 1}; 
+
+//  float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix \!/ OLD WORKING \!/
+ 
+  float B_tmp[MARINUS][NICO] = {{indi.g1.p/4, -indi.g1.p/4,  -indi.g1.p/4, indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix
 
  //  Actually define the Control Effectiveness (necessary for **DOUBLE ARRAY input
-  float** B = (float**)calloc(3, sizeof(float*)); 
-    for (int i = 0; i < 3; i++) {
-        B[i] = (float*)calloc(4, sizeof(float*));
-        for (int j = 0; j < 4; j++) B[i][j] = B_tmp[i][j];
+  float** B = (float**)calloc(MARINUS, sizeof(float*)); 
+    for (int i = 0; i < MARINUS; i++) {
+        B[i] = (float*)calloc(NICO, sizeof(float*));
+        for (int j = 0; j < NICO; j++) B[i][j] = B_tmp[i][j];
     }
 
   // CONTROL OBJECTIVE V
-  float v[3] = {0, 0, 0};
+  //float v[3] = {0, 0, 0}; OLD WORKING
+  float v[MARINUS] = {0, 0, 0}; // NEW
+
+
+  //FIXME: Jerryrig "incremental Thrust"
+  wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - wls_z1_thrust; // incremental thrust
+  wls_z1_thrust = stabilization_cmd[COMMAND_THRUST];
 
   v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p);
   v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q);
   v[2]  = (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r); //this needs to be edited using the output of the WLS CA
-  
+//  v[3] = wls_temp_thrust;
+
   // Call wls control allocator
-  wls_alloc(u,v,umin,umax,B,4,3,0,0,Wv,0,0,1000,100);
+  wls_alloc(u,v,umin,umax,B,NICO,MARINUS,0,0,Wv,0,0,1000,100);
 
   // Add wls command to *filtered* actuator feedback
   float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
@@ -379,47 +393,6 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   u_cmd[1] = u[1] + u_fb[1]; 
   u_cmd[2] = u[2] + u_fb[2]; 
   u_cmd[3] = u[3] + u_fb[3];
-
-  //VERIFY ACTUATOR FEEDBACK
-//  u_cmd[0] = u_fb[0];
-//  u_cmd[1] = u_fb[1];
-//  u_cmd[2] = u_fb[2]; 
-//  u_cmd[3] = u_fb[3];
-
-//	printf("\n-----------THIS IS WLS------------");
-//    for(int i = 0; i < 4; i++)
-//        printf("%.2f____", u_cmd[i]);
-//    return 0;
-
-// printf("u = \n");
-// printf("-----------------\n");
-// /* Display contents of an n vector. */
-//	int i;
-//	printf("[ ");
-//	for (i=0 ; i < 4 ; i++)
-//	  	printf("%8.3g ",u[i]);
-//        printf("]\n");
-//printf("-----------------\n");
-//
-//display contents of the matrix
-// printf("B_tmp = \n");
-// printf("-----------------\n");
-//	  i = 0;
-//	  int j = 0;
-//	    for (i=0 ; i < 3; i++) {
-//		if (i==0) printf("[ ");
-//		else printf("  ");
-//		for (j=0 ; j < 4; j++)
-//		 printf("%d\n",stabilization_cmd[COMMAND_THRUST]);
-//		 printf("%8.3g\n",COMMAND_PITCH);
-//		if (i<2) printf("\n");
-//		 else printf("]\n");
-//		printf("____%8.3g",u_actuators[0]);
-//		printf("____%d",actuators_bebop.rpm_obs[0]);
-//		printf("____%8.3g",u_actuators[2]);
-//		printf("____%8.3g\n",u_actuators[3]);
-//	}
-// printf("-----------------\n");
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
@@ -464,16 +437,14 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
     // only run the estimation if the commands are not zero.
     lms_estimation();
   }
-
   /*  INDI feedback */
   indi_commands[COMMAND_ROLL] = indi.u_in.p;
   indi_commands[COMMAND_PITCH] = indi.u_in.q;
   indi_commands[COMMAND_YAW] = indi.u_in.r;
-  indi_commands[COMMAND_WLS_1] = u_cmd[0]; //u_cmd[0];   // previously with (int32_t) cast
-//  printf("check: %d zzzz \n", indi_commands[COMMAND_WLS_1]);
-  indi_commands[COMMAND_WLS_2] = u_cmd[1];
-  indi_commands[COMMAND_WLS_3] = u_cmd[2];
-  indi_commands[COMMAND_WLS_4] = u_cmd[3];
+  indi_commands[COMMAND_WLS_1] = indi.u_act_dyn.p; // u_cmd[0];   // previously with (int32_t) cast
+  indi_commands[COMMAND_WLS_2] = indi.u_act_dyn.q; 
+  indi_commands[COMMAND_WLS_3] = indi.u_act_dyn.r;  // use for comparison in plots
+  indi_commands[COMMAND_WLS_4] = u_actuators[3];
 }
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
@@ -495,10 +466,10 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   stabilization_cmd[COMMAND_YAW] =   stabilization_att_indi_cmd[COMMAND_YAW];
 
  //  WLS control allocator functions
- //  stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1];
- //  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
- //  stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
- //  stabilization_cmd[COMMAND_WLS_3] =  stabilization_att_indi_cmd[COMMAND_WLS_3];
+   stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1];  // \!/ To verify actuator feedback
+   stabilization_cmd[COMMAND_WLS_2] =  stabilization_att_indi_cmd[COMMAND_WLS_2];
+   stabilization_cmd[COMMAND_WLS_3] =  stabilization_att_indi_cmd[COMMAND_WLS_3];  
+   stabilization_cmd[COMMAND_WLS_4] =  stabilization_att_indi_cmd[COMMAND_WLS_4];
  //  stabilization_cmd[COMMAND_WLS_4] =  stabilization_att_indi_cmd[COMMAND_WLS_3]; 
 
   // \!/ ACHTUNG JERRYRIG!!!
@@ -510,7 +481,7 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   /* bound the result */
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
-  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ);
+  BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ); 
 
 //	----------------------
 //	----------------------
