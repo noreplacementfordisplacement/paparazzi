@@ -51,7 +51,7 @@
 #include <stdio.h>
 
 // WLS defines
-#define MAX_MOTOR_WLS 9000
+#define MAX_MOTOR_WLS 3000 //used to be 9000
 #define MIN_MOTOR_WLS 3000
 //#define MARINUS 3 //OLD WORKING VERSION!
 #define MARINUS 3
@@ -355,11 +355,11 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   float u[NICO] = {0.0, 0.0, 0.0, 0.0};
 
 //  float Wv[3] = {10, 10, 1}; //State prioritization {W Roll, W pitch, W yaw} //OLD WORKING
-  float Wv[MARINUS] = {10, 10, 1}; 
+  float Wv[MARINUS] = {1, 2, 1}; 
 
 //  float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix \!/ OLD WORKING \!/
  
-  float B_tmp[MARINUS][NICO] = {{indi.g1.p/4, -indi.g1.p/4,  -indi.g1.p/4, indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix
+  float B_tmp[MARINUS][NICO] = {{indi.g1.p/4, -indi.g1.p/4,  -indi.g1.p/4, indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 }, {(indi.g1.r + indi.g2)/4, -(indi.g1.r + indi.g2)/4, (indi.g1.r + indi.g2)/4, -(indi.g1.r + indi.g2)/4}}; // (Temporary) Control effectiveness matrix
 
  //  Actually define the Control Effectiveness (necessary for **DOUBLE ARRAY input
   float** B = (float**)calloc(MARINUS, sizeof(float*)); 
@@ -377,9 +377,9 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - wls_z1_thrust; // incremental thrust
   wls_z1_thrust = stabilization_cmd[COMMAND_THRUST];
 
-  v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p);
-  v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q);
-  v[2]  = (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r); //this needs to be edited using the output of the WLS CA
+  v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p); //SINGULAR VERIFIED!!!!
+  v[1]  = (indi.angular_accel_ref.q - indi.rate.dx.q); //SINGULAR VERIFIED!
+  v[2]  = 0; // (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r); //FIXME: this needs to be edited using the output of the WLS CA
 //  v[3] = wls_temp_thrust;
 
   // Call wls control allocator
@@ -441,10 +441,10 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   indi_commands[COMMAND_ROLL] = indi.u_in.p;
   indi_commands[COMMAND_PITCH] = indi.u_in.q;
   indi_commands[COMMAND_YAW] = indi.u_in.r;
-  indi_commands[COMMAND_WLS_1] = indi.u_act_dyn.p; // u_cmd[0];   // previously with (int32_t) cast
-  indi_commands[COMMAND_WLS_2] = indi.u_act_dyn.q; 
-  indi_commands[COMMAND_WLS_3] = indi.u_act_dyn.r;  // use for comparison in plots
-  indi_commands[COMMAND_WLS_4] = u_actuators[3];
+  indi_commands[COMMAND_WLS_1] = u_cmd[0]; // u_cmd[0];   // previously with (int32_t) cast
+  indi_commands[COMMAND_WLS_2] = u_cmd[1]; 
+  indi_commands[COMMAND_WLS_3] = u_cmd[2];  // use for comparison in plots
+  indi_commands[COMMAND_WLS_4] = u_cmd[3];
 }
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
@@ -462,8 +462,8 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
 
   /* copy the INDI command */
   stabilization_cmd[COMMAND_ROLL] =  stabilization_att_indi_cmd[COMMAND_ROLL];
-  stabilization_cmd[COMMAND_PITCH] = stabilization_att_indi_cmd[COMMAND_PITCH];
-  stabilization_cmd[COMMAND_YAW] =   stabilization_att_indi_cmd[COMMAND_YAW];
+  stabilization_cmd[COMMAND_PITCH] = 0; //stabilization_att_indi_cmd[COMMAND_PITCH];
+  stabilization_cmd[COMMAND_YAW] = 0; //stabilization_att_indi_cmd[COMMAND_YAW];
 
  //  WLS control allocator functions
    stabilization_cmd[COMMAND_WLS_1] =  stabilization_att_indi_cmd[COMMAND_WLS_1];  // \!/ To verify actuator feedback
@@ -489,8 +489,11 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
 //	----------------------
 //	----------------------
 
-//	printf("::::::::::::::::::::::::::::::::::\n");
-//	printf("%d\n", stabilization_cmd[COMMAND_WLS_1]);
+	printf("::::::::::::::::::::::::::::::::::\n");
+	printf("CMD ROLL %d\n", stabilization_cmd[COMMAND_ROLL]);
+	printf("CMD THRUST %d\n", stabilization_cmd[COMMAND_THRUST]);
+	printf("\n");
+
 //	printf("%d\n", stabilization_cmd[COMMAND_WLS_2]);
 //	printf("%d\n", stabilization_cmd[COMMAND_WLS_3]);
 //	printf("::::::::::::::::::::::::::::::::::\n");
