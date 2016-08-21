@@ -316,6 +316,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
 	wls_override[1] = in_cmd_wls[1];
 	wls_override[2] = in_cmd_wls[2];
 	wls_override[3] = in_cmd_wls[3];
+
         for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
           if (motor_mixing.override_enabled[i]) {
 //           motor_mixing.commands[i] = motor_mixing.override_value[i]; //OLD ORIGINAL

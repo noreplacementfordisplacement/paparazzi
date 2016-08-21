@@ -88,9 +88,9 @@ struct IndiVariables {
 };
 
 
-//FIXME		 \!/ 	QUICK DIRTY FIX FOR WLS CA
+//FIXME	 \!/ 	QUICK DIRTY FIX FOR WLS CA
 int32_t in_cmd_wls[4]; // #jerryrig to pass variables to motor_mixing
-//float hopflop; //FIXME test thrust command increment
+float wlsg2_fb; //FIXME: should be in a nice struct or something
 //float hopflop_delay;
 
 extern struct IndiVariables indi;
