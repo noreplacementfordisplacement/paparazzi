@@ -307,6 +307,8 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //                            0 0
   //---------------------------------------------------------------------
   //---------------------------------------------------------------------
+   //RUN REGULAR OR WLS?
+	bool regindi = true; //true is run regular indi
 
    // Current actuator state (RPM FB) (IN MM coordinates)
    u_act_dyn_actuators[0] = (actuators_bebop.rpm_obs[0]- MIN_MOTOR_WLS)*(MAX_PPRZ/9000); 
@@ -391,21 +393,24 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   v[2] = (indi.angular_accel_ref.r - indi.rate.dx.r + wlsg2_fb); //WLS YAW CONTROL //Verified 
   v[3] = wls_temp_thrust;
 
-if (regindi = false){
+if (regindi == false){
   // Call the ALMIGHTY WLS CONTROLL ALLOCATOR
   // WLS TILL I'LL DIE
   wls_alloc(u,v,umin,umax,B,NICO,MARINUS,0,0,Wv,0,0,1000,100);
   // THANK YOU WLS CONTROL ALLOCATOR
   }
 
- if(regindi = true){
+if (regindi == true){
 // MANUAL Pseudo Inverse
-	float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642}, {-11.904762, 16.666667, 3.08642}, {-11.904762, -16.666667, -3.08642},{11.904762, -16.666667, 3.08642}};
+	float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642}, 
+				{-11.904762, 16.666667, 3.08642}, 
+				{-11.904762, -16.666667, -3.08642}, 
+				{11.904762, -16.666667, 3.08642}};
 	
-	u[0] = (B_pinv[0][0] * v[0]) + (B_pinv[0][1] * v[1]) + (B_pinv[0][2] * v[3]);
-  	u[1] = (B_pinv[1][0] * v[0]) + (B_pinv[1][1] * v[1]) + (B_pinv[1][2] * v[3]);
-  	u[2] = (B_pinv[2][0] * v[0]) + (B_pinv[2][1] * v[1]) + (B_pinv[2][2] * v[3]);
-  	u[3] = (B_pinv[3][0] * v[0]) + (B_pinv[3][1] * v[1]) + (B_pinv[3][2] * v[3]);
+	u[0] = (B_pinv[0][0] * v[0]) + (B_pinv[0][1] * v[1]) + (B_pinv[0][2] * v[2]);
+  	u[1] = (B_pinv[1][0] * v[0]) + (B_pinv[1][1] * v[1]) + (B_pinv[1][2] * v[2]);
+  	u[2] = (B_pinv[2][0] * v[0]) + (B_pinv[2][1] * v[1]) + (B_pinv[2][2] * v[2]);
+  	u[3] = (B_pinv[3][0] * v[0]) + (B_pinv[3][1] * v[1]) + (B_pinv[3][2] * v[2]);
 }	
 
  
@@ -421,13 +426,25 @@ if (regindi = false){
 	u_cmd[0] = 0;
 	u_cmd[1] = 0;
 	u_cmd[2] = 0;
-	u_cmd[3] = 0;}
+	u_cmd[3] = 0;
+	}
   else{
   // If everything is correct this can be used as direct actuator input
   u_cmd[0] = u[0] + u_actuators[0];
   u_cmd[1] = u[1] + u_actuators[1]; 
   u_cmd[2] = u[2] + u_actuators[2]; 
   u_cmd[3] = u[3] + u_actuators[3];
+
+ 	if (regindi == true){
+  	float avg_u_in = (u_cmd[0] + u_cmd[1] + u_cmd[2] + u_cmd[3])/4.0;
+
+  	if(avg_u_in > 1.0) {
+    		u_cmd[0] = u_cmd[0] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
+    		u_cmd[1] = u_cmd[1] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
+    		u_cmd[2] = u_cmd[2] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
+    		u_cmd[3] = u_cmd[3] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
+		 	}
+		}	
 
    // Bound total output
    Bound(u_cmd[0], 0, MAX_MOTOR_WLS); //should be MAX_MOTOR_WLS (REA
@@ -446,11 +463,6 @@ if (regindi = false){
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
- // 			REGULAR INDI
-
-	
-
-
 
   //add the increment to the total control input
   indi.u_in.p = indi.u.x.p + indi.du.p;
