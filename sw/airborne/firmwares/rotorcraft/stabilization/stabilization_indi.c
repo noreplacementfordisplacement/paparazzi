@@ -64,7 +64,7 @@
 // these parameters are used in the filtering of the angular acceleration
 // define them in the airframe file if different values are required
 #ifndef STABILIZATION_INDI_FILT_OMEGA
-#define STABILIZATION_INDI_FILT_OMEGA 50.0
+#define STABILIZATION_INDI_FILT_OMEGA 50.0 //should be 50
 #endif
 
 #define STABILIZATION_INDI_FILT_OMEGA2 (STABILIZATION_INDI_FILT_OMEGA*STABILIZATION_INDI_FILT_OMEGA)
@@ -123,6 +123,7 @@ float u_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float udotdot_actuators[4] = {0.0, 0.0, 0.0, 0.0};
 float u_act_dyn_actuators[4] = {0.0, 0.0, 0.0, 0.0};
+float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
 
 //FIXME: For the logger
   // input u (output of WLS controller)
@@ -307,17 +308,17 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //---------------------------------------------------------------------
   //---------------------------------------------------------------------
 
-   // Current actuator state (RPM FB)
-   u_act_dyn_actuators[0] = actuators_bebop.rpm_obs[0];
-   u_act_dyn_actuators[1] = actuators_bebop.rpm_obs[1];
-   u_act_dyn_actuators[2] = actuators_bebop.rpm_obs[2];
-   u_act_dyn_actuators[3] = actuators_bebop.rpm_obs[3];
+   // Current actuator state (RPM FB) (IN MM coordinates)
+   u_act_dyn_actuators[0] = (actuators_bebop.rpm_obs[0]- MIN_MOTOR_WLS)*(MAX_PPRZ/9000); 
+   u_act_dyn_actuators[1] = (actuators_bebop.rpm_obs[1]- MIN_MOTOR_WLS)*(MAX_PPRZ/9000); 
+   u_act_dyn_actuators[2] = (actuators_bebop.rpm_obs[2]- MIN_MOTOR_WLS)*(MAX_PPRZ/9000); 
+   u_act_dyn_actuators[3] = (actuators_bebop.rpm_obs[3]- MIN_MOTOR_WLS)*(MAX_PPRZ/9000); 
 
    // For some reason this is necessary
-   u_actuators[0] = u_act_dyn_actuators[0];
-   u_actuators[1] = u_act_dyn_actuators[1];
-   u_actuators[2] = u_act_dyn_actuators[2];
-   u_actuators[3] = u_act_dyn_actuators[3];
+   // u_actuators[0] = u_act_dyn_actuators[0];
+   // u_actuators[1] = u_act_dyn_actuators[1];
+   // u_actuators[2] = u_act_dyn_actuators[2];
+   // u_actuators[3] = u_act_dyn_actuators[3];
 
     // Filter actuators
     VECT4_INTEGRATE(u_actuators, udot_actuators, 512.0);
@@ -330,37 +331,36 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
    udotdot_actuators[3] = -udot_actuators[3] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_actuators[3])*STABILIZATION_INDI_FILT_OMEGA2;
 
   // create feedback actuator state for wls control allocator
-  float u_fb[NICO] = {0.0 , 0.0 , 0.0, 0.0};
+  //float u_fb[NICO] = {0.0 , 0.0 , 0.0, 0.0};
 
-  // WLS FB in Motor_Mixing convention (mm_cmd = (rpm_fb - 3000)*MAX_PPRZ/9000) (only for BEBOP) (MAX_PPRZ = 9600) 9000 = approx servo range
-  u_fb[0] = (u_actuators[0] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000); // Taken 8300 because bebop max = approx 8300 REAL RPM
-  u_fb[1] = (u_actuators[1] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
-  u_fb[2] = (u_actuators[2] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
-  u_fb[3] = (u_actuators[3] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
+ // u_actuators[0] = u_act_dyn_actuators[0];
+ // u_actuators[1] = u_act_dyn_actuators[1];
+  //u_actuators[2] = u_act_dyn_actuators[2];
+  //u_actuators[3] = u_act_dyn_actuators[3]; 
 
-  //bound the total control input (RANGE in Motor Mixing "signs" (0 - MAX_PPRZ)
-  // THIS Determines the saturation of the actuators (in this case MAX_MOTOR_WLS)
-  Bound(u_fb[0], 0, MAX_MOTOR_WLS); //should be MAX_MOTOR_WLS (REA
-  Bound(u_fb[1], 0, MAX_MOTOR_WLS);
-  Bound(u_fb[2], 0, MAX_MOTOR_WLS);
-  Bound(u_fb[3], 0, MAX_MOTOR_WLS);
+// WLS FB in Motor_Mixing convention (mm_cmd = (rpm_fb - 3000)*MAX_PPRZ/9000) (only for BEBOP) (MAX_PPRZ = 9600) 9000 = approx servo range
+  //u_fb[0] = (u_actuators[0] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000); // Taken 8300 because bebop max = approx 8300 REAL RPM
+  //u_fb[1] = (u_actuators[1] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
+  //u_fb[2] = (u_actuators[2] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
+  //u_fb[3] = (u_actuators[3] - MIN_MOTOR_WLS)*(MAX_PPRZ/9000);
+
  
   //MAX possible MINUMUM increment 
   float umin[NICO] = {0.0 , 0.0, 0.0, 0.0};
-  umin[0] = -u_fb[0]; 
-  umin[1] = -u_fb[1]; 
-  umin[2] = -u_fb[2]; 
-  umin[3] = -u_fb[3];
+  umin[0] = -u_actuators[0]; 
+  umin[1] = -u_actuators[1]; 
+  umin[2] = -u_actuators[2]; 
+  umin[3] = -u_actuators[3];
    
   //MAX possible MAXIMUM increment
   float umax[NICO] = {MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS, MAX_MOTOR_WLS};
-  umax[0] = MAX_MOTOR_WLS - u_fb[0]; // SHOULD BE MAX_MOTOR_WLS
-  umax[1] = MAX_MOTOR_WLS - u_fb[1];
-  umax[2] = MAX_MOTOR_WLS - u_fb[2];
-  umax[3] = MAX_MOTOR_WLS - u_fb[3];
+  umax[0] = MAX_MOTOR_WLS - u_actuators[0]; // SHOULD BE MAX_MOTOR_WLS
+  umax[1] = MAX_MOTOR_WLS - u_actuators[1];
+  umax[2] = MAX_MOTOR_WLS - u_actuators[2];
+  umax[3] = MAX_MOTOR_WLS - u_actuators[3];
 
   //State prioritization {W Roll, W pitch, W yaw} //OLD WORKING
-  float Wv[MARINUS] = {1, 1, 1, 1}; //ACHTUNG SHOULD BE 3 
+  float Wv[MARINUS] = {5, 5, 1, 1}; //ACHTUNG SHOULD BE 3 
 
 //  float B_tmp[3][4] = {{-indi.g1.p/4,  indi.g1.p/4,  indi.g1.p/4, -indi.g1.p/4},{indi.g1.q/4, indi.g1.q/4, -indi.g1.q/4, -indi.g1.q/4 },{(indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2)}}; // (Temporary) Control effectiveness matrix \!/ OLD WORKING \!/
   //FIXME: Seriously though this needs te be kept OUT OF THE LOOP
@@ -368,6 +368,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 
  //  Actually define the Control Effectiveness (necessary for **DOUBLE ARRAY input
  //FIXME: Y U DO DIS?! This has to be out of the loop!!!!
+ //FIXME: Tell me DJ KHALED what do you see? MAJOR LEAK ALLERT!! \!/\!/\!/\!/
   float** B = (float**)calloc(MARINUS, sizeof(float*)); 
     for (int i = 0; i < MARINUS; i++) {
         B[i] = (float*)calloc(NICO, sizeof(float*));
@@ -381,8 +382,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 
   //FIXME: Jerryrig "incremental Thrust"
 //  wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - wls_z1_thrust; // incremental thrust
-  wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - (u_fb[0] + u_fb[1] + u_fb[2] +u_fb[3])/4; // incremental thrust
-  wls_z1_thrust = stabilization_cmd[COMMAND_THRUST];
+  wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - (u_actuators[0] + u_actuators[1] + u_actuators[2] +u_actuators[3])/4; // incremental thrust
   wls_z1_thrust = stabilization_cmd[COMMAND_THRUST];
 
   v[0]  = (indi.angular_accel_ref.p - indi.rate.dx.p); //SINGULAR VERIFIED!!!!
@@ -391,21 +391,30 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   v[2] = (indi.angular_accel_ref.r - indi.rate.dx.r + wlsg2_fb); //WLS YAW CONTROL //Verified 
   v[3] = wls_temp_thrust;
 
+if (regindi = false){
   // Call the ALMIGHTY WLS CONTROLL ALLOCATOR
   // WLS TILL I'LL DIE
   wls_alloc(u,v,umin,umax,B,NICO,MARINUS,0,0,Wv,0,0,1000,100);
   // THANK YOU WLS CONTROL ALLOCATOR
-  
-//  float wlsg2_fb; //Now the necessary feedback for the yaw control
-//  float wlsg2[4] = {-indi.g2, indi.g2, -indi.g2, indi.g2};//FIXME: Temporary "G2" Matrix
+  }
+
+ if(regindi = true){
+// MANUAL Pseudo Inverse
+	float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642}, {-11.904762, 16.666667, 3.08642}, {-11.904762, -16.666667, -3.08642},{11.904762, -16.666667, 3.08642}};
+	
+	u[0] = (B_pinv[0][0] * v[0]) + (B_pinv[0][1] * v[1]) + (B_pinv[0][2] * v[3]);
+  	u[1] = (B_pinv[1][0] * v[0]) + (B_pinv[1][1] * v[1]) + (B_pinv[1][2] * v[3]);
+  	u[2] = (B_pinv[2][0] * v[0]) + (B_pinv[2][1] * v[1]) + (B_pinv[2][2] * v[3]);
+  	u[3] = (B_pinv[3][0] * v[0]) + (B_pinv[3][1] * v[1]) + (B_pinv[3][2] * v[3]);
+}	
+
  
   wlsg2_fb = (-indi.g2*u[0] + indi.g2*u[1] - indi.g2*u[2] + indi.g2*u[3]);
   //FIXME: for comparison with INDI
   wls_p = (u[0] -u[1]  -u[2] + u[3]);
   wls_q = (u[0] + u[1]  - u[2] - u[3]);
   wls_r = (-u[0] + u[1] -u[2] +u[3]);
-  // Add wls command to *filtered* actuator feedback
-  float u_cmd[4] = {0.0 , 0.0, 0.0, 0.0};
+  // Add wls command to *filtered* actuator feedback 
 
   // Additional control over when the WLS is activated
   if (stabilization_cmd[COMMAND_THRUST] < 1000) {
@@ -415,10 +424,17 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 	u_cmd[3] = 0;}
   else{
   // If everything is correct this can be used as direct actuator input
-  u_cmd[0] = u[0] + u_fb[0];
-  u_cmd[1] = u[1] + u_fb[1]; 
-  u_cmd[2] = u[2] + u_fb[2]; 
-  u_cmd[3] = u[3] + u_fb[3];
+  u_cmd[0] = u[0] + u_actuators[0];
+  u_cmd[1] = u[1] + u_actuators[1]; 
+  u_cmd[2] = u[2] + u_actuators[2]; 
+  u_cmd[3] = u[3] + u_actuators[3];
+
+   // Bound total output
+   Bound(u_cmd[0], 0, MAX_MOTOR_WLS); //should be MAX_MOTOR_WLS (REA
+   Bound(u_cmd[1], 0, MAX_MOTOR_WLS);
+   Bound(u_cmd[2], 0, MAX_MOTOR_WLS);
+   Bound(u_cmd[3], 0, MAX_MOTOR_WLS);
+
   }
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
@@ -427,6 +443,12 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
  //                            0 0
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
+
+ //---------------------------------------------------------------------
+ //---------------------------------------------------------------------
+ // 			REGULAR INDI
+
+	
 
 
 
@@ -509,20 +531,6 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ); 
 
-//	----------------------
-//	----------------------
-//      PRINT THE OUTPUT MOTOR COMMANDS
-//	----------------------
-//	----------------------
-
-	printf("::::::::::::::::::::::::::::::::::\n");
-	printf("CMD ROLL %d\n", stabilization_cmd[COMMAND_ROLL]);
-	printf("CMD THRUST %d\n", stabilization_cmd[COMMAND_THRUST]);
-	printf("\n");
-
-//	printf("%d\n", stabilization_cmd[COMMAND_WLS_2]);
-//	printf("%d\n", stabilization_cmd[COMMAND_WLS_3]);
-//	printf("::::::::::::::::::::::::::::::::::\n");
 }
 
 // This function reads rc commands
