@@ -117,7 +117,7 @@ int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
 float wls_temp_thrust = 0; //Incremental thrust
 
-static float Wv[MARINUS] = {5, 5, 1, 2}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+static float Wv[MARINUS] = {10, 10, 1, 3}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool regindi = false; //Set if the WLS INDI or Regular INDI is used: false = WLS INDI, true = Regular INDI
 //bool B_init = false; //Probably not the correct way of initializing a matrix
 //float B_tmp[MARINUS][NICO]; //G1 + G2 for WLS control allocator
@@ -331,6 +331,12 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
    udotdot_actuators[1] = -udot_actuators[1] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[1] - u_actuators[1])*STABILIZATION_INDI_FILT_OMEGA2;
    udotdot_actuators[2] = -udot_actuators[2] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[2] - u_actuators[2])*STABILIZATION_INDI_FILT_OMEGA2;
    udotdot_actuators[3] = -udot_actuators[3] * 2*STABILIZATION_INDI_FILT_ZETA*STABILIZATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_actuators[3])*STABILIZATION_INDI_FILT_OMEGA2;
+
+   // Bound total input
+   Bound(u_actuators[0], 0, MAX_MOTOR_WLS);
+   Bound(u_actuators[1], 0, MAX_MOTOR_WLS);
+   Bound(u_actuators[2], 0, MAX_MOTOR_WLS);
+   Bound(u_actuators[3], 0, MAX_MOTOR_WLS);
  
   //MAX possible MINUMUM increment 
   umin[0] = -u_actuators[0]; 
@@ -373,7 +379,7 @@ float B_tmp[MARINUS][NICO] = {{indi.g1.p, -indi.g1.p,  -indi.g1.p, indi.g1.p},{i
 if (regindi == false){
   // WLS Control Allocator
   // u: output incremental actuator commands, v: control objective, umin,umax: maximum possible positive and negative increments, B: control effectiveness matrix (needs to be of ** type), Wv: priority of WLS control allocator, gamma (1000): weight on control objective solution (should be => 1000), rmax (100): maximum number of iterations
-  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,1000,100);
+  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,10000,100);
   }
 
 //FIXME: Free Bwls
