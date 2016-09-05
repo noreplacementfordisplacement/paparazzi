@@ -96,6 +96,9 @@ float wls_p; float wls_q; float wls_r; //FIXME: Comparison for WLS output direct
 //float hopflop_delay;
 float u[4]; // for the file logger
 
+float G1wls[3][4];
+float G2wls[4];
+
 extern struct IndiVariables indi;
 extern void stabilization_indi_init(void);
 extern void stabilization_indi_enter(void);

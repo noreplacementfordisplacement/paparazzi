@@ -40,9 +40,14 @@
 #include "paparazzi.h"
 #include "subsystems/radio_control.h"
 
-// Actuator feedback libraries
+// Actuator feedback headers
 #include "boards/bebop/actuators.h"
 #include "subsystems/commands.h"
+
+// Matrix Inverse headers
+#include "math/pprz_algebra_float.h"
+#include "math/pprz_algebra_int.h"
+
 
 // WLS Control allocator libraries
  #include "wls/wls_alloc.h"
@@ -73,6 +78,12 @@
 #define STABILIZATION_INDI_FILT_ZETA 0.55
 #endif
 
+//FIXME: Filter values for MANUAL WLS G1, G2 Identification
+#define IDENTIFICATION_INDI_FILT_OMEGA 25
+#define IDENTIFICATION_INDI_FILT_OMEGA2 625
+#define IDENTIFICATION_FILT_ZETA 0.55
+
+
 // the yaw sometimes requires more filtering
 #ifndef STABILIZATION_INDI_FILT_OMEGA_R
 #define STABILIZATION_INDI_FILT_OMEGA_R STABILIZATION_INDI_FILT_OMEGA
@@ -101,6 +112,12 @@ _a[2] = _a[2] + _b[2]/_c; \
 _a[3] = _a[3] + _b[3]/_c; \
 }
 
+#define RATES_INTEGRATE(_a, _b, _c) { \
+_a.p = _a.p + _b.p/_c; \
+_a.q = _a.q + _b.q/_c; \
+_a.r = _a.r + _b.r/_c; \
+}
+
 struct Int32Eulers stab_att_sp_euler;
 struct Int32Quat   stab_att_sp_quat;
 
@@ -117,10 +134,13 @@ int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
 float wls_temp_thrust = 0; //Incremental thrust
 
-static float Wv[MARINUS] = {10, 10, 1, 3}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+static float Wv[MARINUS] = {10, 10, 1, 10}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool regindi = false; //Set if the WLS INDI or Regular INDI is used: false = WLS INDI, true = Regular INDI
-//bool B_init = false; //Probably not the correct way of initializing a matrix
-//float B_tmp[MARINUS][NICO]; //G1 + G2 for WLS control allocator
+bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
+/*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
+					{0.015, 0.015, -0.015, -0.015},
+					{-0.081, 0.081, -0.081, 0.081},
+					{0.25, 0.25, 0.25, 0.25}}; //G1 + G2 for WLS control allocator */
 
 static float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642}, 
 				{-11.904762, 16.666667, 3.08642}, 
@@ -128,12 +148,49 @@ static float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642},
 				{11.904762, -16.666667, 3.08642}};
 float** Bwls;
 
+// For estimating the actuator effectiveness
+struct FloatRates rate_estimation = {0., 0., 0.};
+struct FloatRates ratedot_estimation = {0., 0., 0.};
+struct FloatRates ratedotdot_estimation = {0., 0., 0.};
+float u_estimate[NICO] = {0.0, 0.0, 0.0, 0.0};
+float udot_estimate[NICO] = {0.0, 0.0, 0.0, 0.0};
+float udotdot_estimate[NICO] = {0.0, 0.0, 0.0, 0.0};
+
+//FIXME: BSVARS to estimate the actuator effectiveness
+float G1G2[3][4] = {{0.0 , 0.0, 0.0 , 0.0 },
+{0.0 , 0.0, 0.0 , 0.0 },
+{0.0, 0.0, 0.0, 0.0}};
+float G1_new[3][4] = {{0.0 , 0.0, 0.0 , 0.0 },
+{0.0 , 0.0, 0.0 , 0.0 },
+{0.0, 0.0, 0.0, 0.0}};
+float G2_new[4] = {0.0, 0.0, 0.0, 0.0};
+
+// Logged data
+float G1wls[3][4] = {{18.714466,-19.069790,-17.831696,18.556572},
+	{10.775445,11.787354,-11.811313,-13.239703}, 
+	{-1.484409,1.169872,-0.327754,0.601182}};
+
+float G2wls[4] = {-50.354893,63.950779,-51.292622,73.191154};
+
+
+float mu1 = 0.00001;
+float mu2 = 0.00001*600.0;
+float dx_estimation[3] = {0.0, 0.0, 0.0};
+float du_estimation[4] = {0.0, 0.0, 0.0, 0.0};
+float ddu_estimation[4] = {0.0, 0.0, 0.0, 0.0};
+float dx_error_disp[3];
+
 //Functions
 static int32_t stabilization_att_indi_cmd[COMMANDS_NB];
 static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct Int32Quat *att_err, bool rate_control);
 static void stabilization_indi_second_order_filter_init(struct IndiFilter *filter, float omega, float zeta, float omega_r);
 static void stabilization_indi_second_order_filter(struct IndiFilter *filter, struct FloatRates *input);
 static inline void lms_estimation(void);
+
+//Control Effectiveness Estimator Functions
+static void calc_g1_element(float du_norm, float dx_error, int8_t i, int8_t j, float mu_extra);
+static void calc_g2_element(float dx_error, int8_t j, float mu_extra);
+static void lmsg1_estimation(void);
 
   // input u (output of WLS controller)
   float u[NICO] = {0.0, 0.0, 0.0, 0.0};
@@ -212,7 +269,6 @@ void stabilization_indi_enter(void)
   /* reset psi setpoint to current psi angle */
   stab_att_sp_euler.psi = stabilization_attitude_get_heading_i();
  
-  //FIXME: Zero order hold?
   FLOAT_RATES_ZERO(indi.rate.x);
   FLOAT_RATES_ZERO(indi.rate.dx);
   FLOAT_RATES_ZERO(indi.rate.ddx);
@@ -353,18 +409,16 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 //  static float** B; // Initialize **B
   
   //FIXME: Not really elegant
-//  if (B_init == false){	
+//  if (wls_adaptive == false){
   //Static control effectiveness matrix for the WLS control allocator, last row is not considered INDI, is only used for the Thrust command
-float B_tmp[MARINUS][NICO] = {{indi.g1.p, -indi.g1.p,  -indi.g1.p, indi.g1.p},{indi.g1.q, indi.g1.q, -indi.g1.q, -indi.g1.q }, {-(indi.g1.r + indi.g2), (indi.g1.r + indi.g2), -(indi.g1.r + indi.g2), (indi.g1.r + indi.g2)}, {0.25, 0.25, 0.25, 0.25}};
-
+	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.25, 0.25, 0.25, 0.25}};
+//	}
  // FIXME: Allocate and free **B each time... not very efficient
- float** Bwls = (float**)calloc(MARINUS, sizeof(float*)); 
+ 	Bwls = (float**)calloc(MARINUS, sizeof(float*)); 
  	   for (int i = 0; i < MARINUS; i++) {
  	       Bwls[i] = (float*)calloc(NICO, sizeof(float*));
  	       for (int j = 0; j < NICO; j++) Bwls[i][j] = B_tmp[i][j];
  	   }
-//	B_init = true;
-//	}
 
   //FIXME: Jerryrig "incremental Thrust"
   wls_temp_thrust = stabilization_cmd[COMMAND_THRUST] - (u_actuators[0] + u_actuators[1] + u_actuators[2] +u_actuators[3])/4; // incremental thrust
@@ -379,7 +433,7 @@ float B_tmp[MARINUS][NICO] = {{indi.g1.p, -indi.g1.p,  -indi.g1.p, indi.g1.p},{i
 if (regindi == false){
   // WLS Control Allocator
   // u: output incremental actuator commands, v: control objective, umin,umax: maximum possible positive and negative increments, B: control effectiveness matrix (needs to be of ** type), Wv: priority of WLS control allocator, gamma (1000): weight on control objective solution (should be => 1000), rmax (100): maximum number of iterations
-  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,10000,100);
+  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,200,100);
   }
 
 //FIXME: Free Bwls
@@ -394,7 +448,28 @@ if (regindi == true){
 }	
 
  // Compute G2 feedback for INDI on yaw axis
-  wlsg2_fb = (-indi.g2*u[0] + indi.g2*u[1] - indi.g2*u[2] + indi.g2*u[3]);
+  wlsg2_fb = (G2wls[0]*INDI_EST_SCALE*u[0] + G2wls[1]*INDI_EST_SCALE*u[1] + G2wls[2]*INDI_EST_SCALE*u[2] + G2wls[3]*INDI_EST_SCALE*u[3]);
+
+//========================================================================================================================================================
+//FIXME: MANUAL ADAPTIVE G1 && G2 FILTERING (less elegent than the other in this document)
+//Sensor dynamics and Filtering (same filter as on gyro measurements) MANUAL ACTUATOR EFFECTIVENESS
+  RATES_INTEGRATE(rate_estimation,ratedot_estimation,512.0);
+  RATES_INTEGRATE(ratedot_estimation,ratedotdot_estimation,512.0);
+
+  ratedotdot_estimation.p = -ratedot_estimation.p * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (stateGetBodyRates_f()->p - rate_estimation.p)*IDENTIFICATION_INDI_FILT_OMEGA2;
+  ratedotdot_estimation.q = -ratedot_estimation.q * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (stateGetBodyRates_f()->q - rate_estimation.q)*IDENTIFICATION_INDI_FILT_OMEGA2;
+  ratedotdot_estimation.r = -ratedot_estimation.r * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (stateGetBodyRates_f()->r - rate_estimation.r)*IDENTIFICATION_INDI_FILT_OMEGA2;
+
+    // Filter actuators
+    VECT4_INTEGRATE(u_estimate, udot_estimate, 512.0);
+    VECT4_INTEGRATE(udot_estimate, udotdot_estimate, 512.0);
+    
+   // Update filter states
+   udotdot_estimate[0] = -udot_estimate[0] * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[0] - u_estimate[0])*IDENTIFICATION_INDI_FILT_OMEGA2;
+   udotdot_estimate[1] = -udot_estimate[1] * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA  + (u_act_dyn_actuators[1] - u_estimate[1])*IDENTIFICATION_INDI_FILT_OMEGA2;
+   udotdot_estimate[2] = -udot_estimate[2] * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[2] - u_estimate[2])*IDENTIFICATION_INDI_FILT_OMEGA2;
+   udotdot_estimate[3] = -udot_estimate[3] * 2*IDENTIFICATION_FILT_ZETA*IDENTIFICATION_INDI_FILT_OMEGA + (u_act_dyn_actuators[3] - u_estimate[3])*IDENTIFICATION_INDI_FILT_OMEGA2;
+//========================================================================================================================================================
 
   //FIXME: This is to kill the INDI/WLS control
   if (stabilization_cmd[COMMAND_THRUST] < 300) {
@@ -419,15 +494,20 @@ if (regindi == true){
     		u_cmd[2] = u_cmd[2] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
     		u_cmd[3] = u_cmd[3] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
 		 	}
-		}	
+		}
+
+    if (wls_adaptive == true){
+	lmsg1_estimation();
+     }	
 
    // Bound total output
    Bound(u_cmd[0], 0, MAX_MOTOR_WLS); //should be MAX_MOTOR_WLS (REA
    Bound(u_cmd[1], 0, MAX_MOTOR_WLS);
    Bound(u_cmd[2], 0, MAX_MOTOR_WLS);
    Bound(u_cmd[3], 0, MAX_MOTOR_WLS);
-
   }
+
+
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
  // 		               0 0
@@ -478,6 +558,109 @@ if (regindi == true){
   indi_commands[COMMAND_WLS_3] = u_cmd[2];
   indi_commands[COMMAND_WLS_4] = u_cmd[3];
 }
+// =======================================================================================
+// :::::::::::::::: WLS Actuator Effectiveness Estimator functions :::::::::::::::::::::::
+static void calc_g1_element(float du_norm, float dx_error, int8_t i, int8_t j, float mu_extra) {
+  G1_new[i][j] = G1wls[i][j] - du_estimation[j]*mu1*dx_error*mu_extra;
+}
+
+static void calc_g2_element(float dx_error, int8_t j, float mu_extra) {
+  G2_new[j] = G2wls[j] - ddu_estimation[j]*mu2*dx_error*mu_extra;
+}
+
+static void lmsg1_estimation(void) {
+  dx_estimation[0] = ratedotdot_estimation.p;
+  dx_estimation[1] = ratedotdot_estimation.q;
+  dx_estimation[2] = ratedotdot_estimation.r;
+  du_estimation[0] = udot_estimate[0]/1000; //  /1000.0;
+  du_estimation[1] = udot_estimate[1]/1000; ///1000.0;
+  du_estimation[2] = udot_estimate[2]/1000; ///1000.0;
+  du_estimation[3] = udot_estimate[3]/1000; ///1000.0;
+  ddu_estimation[0] = udotdot_estimate[0]/1000/512.0; // should be /1000/512;
+  ddu_estimation[1] = udotdot_estimate[1]/1000/512.0;
+  ddu_estimation[2] = udotdot_estimate[2]/1000/512.0;
+  ddu_estimation[3] = udotdot_estimate[3]/1000/512.0;
+
+   //Estimation of G
+  float du_norm = du_estimation[0]*du_estimation[0] + du_estimation[1]*du_estimation[1] +du_estimation[2]*du_estimation[2] + du_estimation[3]*du_estimation[3];
+  float dx_norm = dx_estimation[0]*dx_estimation[0] + dx_estimation[1]*dx_estimation[1] + dx_estimation[2]*dx_estimation[2];
+//   if((dx_norm > 40000.0)) {
+    for(int8_t i=0; i<3; i++) {
+      float mu_extra = 1.0; // adapt according to percieved error DEFAULT mu_extra = 1.0
+      float dx_error = G1wls[i][0]*du_estimation[0] + G1wls[i][1]*du_estimation[1] + G1wls[i][2]*du_estimation[2] + G1wls[i][3]*du_estimation[3] - dx_estimation[i];
+      dx_error_disp[i] = dx_error;
+      //if the yaw axis, also use G2
+      if(i==2) {
+        mu_extra = 0.3; //default mu extra = 0.3
+        dx_error = dx_error + G2wls[0]*ddu_estimation[0] + G2wls[1]*ddu_estimation[1] + G2wls[2]*ddu_estimation[2] + G2wls[3]*ddu_estimation[3];
+        for(int8_t j=0; j<4; j++) {
+          calc_g2_element(dx_error,j, mu_extra);
+        }
+      }
+      for(int8_t j=0; j<4; j++) {
+        calc_g1_element(du_norm, dx_error, i, j, mu_extra);
+      }
+    }
+
+    for(int8_t j=0; j<4; j++) {
+      G2wls[j] = G2_new[j];
+      for(int8_t i=0; i<3; i++) {
+        G1wls[i][j] = G1_new[i][j];
+      }
+    }
+ // }
+}
+
+/* void calc_g1g2_pseudo_inv(void) {
+
+  //sum of G1 and G2
+  for(int8_t i=0; i<3; i++) {
+    for(int8_t j=0; j<4; j++) {
+      if(i<2)
+        G1G2[i][j] = G1[i][j]/1000.0;
+      else
+        G1G2[i][j] = G1[i][j]/1000.0 + G2[j]/1000.0;
+    }
+  }
+
+  //G1G2*transpose(G1G2)
+  //calculate matrix multiplication of its transpose 3x4 x 4x3
+  float element = 0;
+  for(int8_t row=0; row<3; row++) {
+    for(int8_t col=0; col<3; col++) {
+      element = 0;
+      for(int8_t i=0; i<4; i++) {
+        element = element + G1G2[row][i]*G1G2[col][i];
+      }
+      MAT33_ELMT(G1G2_trans_mult,row,col) = element;
+    }
+  }
+
+  //there are numerical errors if the scaling is not right.
+  MAT33_MULT_SCALAR(G1G2_trans_mult,100.0);
+
+  //inverse of 3x3 matrix
+  MAT33_INV(G1G2inv,G1G2_trans_mult);
+
+  //scale back
+  MAT33_MULT_SCALAR(G1G2inv,100.0);
+
+  //G1G2'*G1G2inv
+  //calculate matrix multiplication 4x3 x 3x3
+  for(int8_t row=0; row<4; row++) {
+    for(int8_t col=0; col<3; col++) {
+      element = 0;
+      for(int8_t i=0; i<3; i++) {
+        element = element + G1G2[i][row]*MAT33_ELMT(G1G2inv,col,i);
+      }
+      G1G2_pseudo_inv[row][col] = element;
+    }
+  }
+} */
+
+
+// ===========================================================================================
+
 
 void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool rate_control)
 {
