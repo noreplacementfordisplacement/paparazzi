@@ -136,16 +136,16 @@
 
   <section name="STABILIZATION_ATTITUDE_INDI" prefix="STABILIZATION_INDI_">
     <!-- control effectiveness -->
-<!--    <define name="G1_P" value="0.0639"/>
+    <define name="G1_P" value="0.0639"/>
     <define name="G1_Q" value="0.0361"/>
     <define name="G1_R" value="0.0022"/>
-    <define name="G2_R" value="0.1450"/>-->
+    <define name="G2_R" value="0.1450"/>
 
 <!--NEW VALUES FROM EXPERIMENT BRANCH -->
-    <define name="G1_P" value="0.0210"/>
+<!--    <define name="G1_P" value="0.0210"/>
     <define name="G1_Q" value="0.015"/>
     <define name="G1_R" value="0.001"/>
-    <define name="G2_R" value="0.080"/>
+    <define name="G2_R" value="0.080"/>-->
 
 <!--NEW VALUES FROM EXPERIMENT BRANCH
     <define name="G1_P" value="0.0310"/>
@@ -227,7 +227,7 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
-<!--    <define name="MODE_AUTO2" value="AP_MODE_ATTITUDE_Z_HOLD"/> -->
+<!-- <define name="MODE_AUTO2" value="AP_MODE_ATTITUDE_Z_HOLD"/> -->
     <define name="NO_RC_THRUST_LIMIT" value="TRUE"/>
   </section>
 

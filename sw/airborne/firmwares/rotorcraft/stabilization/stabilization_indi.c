@@ -56,7 +56,7 @@
 #include <stdio.h>
 
 // WLS defines
-#define MAX_MOTOR_WLS 8100 //From experiment data we know the Bebop does not really go over 8100 RPM
+#define MAX_MOTOR_WLS 8600 //From experiment data we know the Bebop does not really go over 8100 RPM
 #define MIN_MOTOR_WLS 3000 //Minimum RPM from the motors
 #define MARINUS 4 //MxN matrix control effectiveness, MARINUS = M: the dimension of the control objective
 #define NICO 4 //MxN matrix control effectiveness, NICO = N: the dimension of the actuators
@@ -134,7 +134,7 @@ int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
 float wls_temp_thrust = 0; //Incremental thrust
 
-static float Wv[MARINUS] = {10, 10, 1, 10}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+static float Wv[MARINUS] = {10, 10, 1, 1}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool regindi = false; //Set if the WLS INDI or Regular INDI is used: false = WLS INDI, true = Regular INDI
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
@@ -142,10 +142,12 @@ bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be a
 					{-0.081, 0.081, -0.081, 0.081},
 					{0.25, 0.25, 0.25, 0.25}}; //G1 + G2 for WLS control allocator */
 
-static float B_pinv[4][3] = {{11.904762, 16.666667, -3.08642}, 
-				{-11.904762, 16.666667, 3.08642}, 
-				{-11.904762, -16.666667, -3.08642}, 
-				{11.904762, -16.666667, 3.08642}};
+// Previously identified Pseudo Inverse of G1+G2
+static float B_pinv[4][3] = {{ 14.6100,  19.4798,  -3.3178}, 
+{  -13.2462,  20.6144,   4.6159},
+{  -13.7314, -23.1307,  -3.6051},
+{   12.3475, -20.6881,  4.6254}};
+
 float** Bwls;
 
 // For estimating the actuator effectiveness
@@ -167,8 +169,8 @@ float G2_new[4] = {0.0, 0.0, 0.0, 0.0};
 
 // Logged data
 float G1wls[3][4] = {{18.714466,-19.069790,-17.831696,18.556572},
-	{10.775445,11.787354,-11.811313,-13.239703}, 
-	{-1.484409,1.169872,-0.327754,0.601182}};
+		{10.775445,11.787354,-11.81133,-13.239703}, 
+		{-1.484409,1.169872,-0.327754,0.601182}};
 
 float G2wls[4] = {-50.354893,63.950779,-51.292622,73.191154};
 
@@ -411,7 +413,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //FIXME: Not really elegant
 //  if (wls_adaptive == false){
   //Static control effectiveness matrix for the WLS control allocator, last row is not considered INDI, is only used for the Thrust command
-	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.25, 0.25, 0.25, 0.25}};
+	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.297628763, 0.2770495344, 0.1933141364, 0.2320075662}};
 //	}
  // FIXME: Allocate and free **B each time... not very efficient
  	Bwls = (float**)calloc(MARINUS, sizeof(float*)); 
@@ -433,7 +435,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 if (regindi == false){
   // WLS Control Allocator
   // u: output incremental actuator commands, v: control objective, umin,umax: maximum possible positive and negative increments, B: control effectiveness matrix (needs to be of ** type), Wv: priority of WLS control allocator, gamma (1000): weight on control objective solution (should be => 1000), rmax (100): maximum number of iterations
-  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,200,100);
+  wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,10000,100);
   }
 
 //FIXME: Free Bwls
@@ -506,7 +508,29 @@ if (regindi == true){
    Bound(u_cmd[2], 0, MAX_MOTOR_WLS);
    Bound(u_cmd[3], 0, MAX_MOTOR_WLS);
   }
+ 
+ // Get body euler angles
+ phim = stateGetNedToBodyEulers_f() -> phi;
+ thetam = stateGetNedToBodyEulers_f() -> theta;
+ psim = stateGetNedToBodyEulers_f() -> psi;
 
+ pratem =  body_rates->p; // Get body euler rates (unfiltered)
+ qratem =  body_rates->q;
+ rratem =  body_rates->r;
+
+ prateref =  indi.angular_accel_ref.p; // Get angular acc. reference 
+ qrateref =  indi.angular_accel_ref.q; 
+ rrateref =  indi.angular_accel_ref.r; 
+
+ u_cmd_log[0] = u_actuators[0]; //log percieved actuator feedback
+ u_cmd_log[1] = u_actuators[1];
+ u_cmd_log[2] = u_actuators[2];
+ u_cmd_log[3] = u_actuators[3];
+
+ // Get body euler reference angles
+ phiref = stab_att_sp_euler.phi;
+ thetaref = stab_att_sp_euler.theta;
+ psiref = stab_att_sp_euler.psi; 
 
  //---------------------------------------------------------------------
  //---------------------------------------------------------------------
@@ -572,11 +596,11 @@ static void lmsg1_estimation(void) {
   dx_estimation[0] = ratedotdot_estimation.p;
   dx_estimation[1] = ratedotdot_estimation.q;
   dx_estimation[2] = ratedotdot_estimation.r;
-  du_estimation[0] = udot_estimate[0]/1000; //  /1000.0;
-  du_estimation[1] = udot_estimate[1]/1000; ///1000.0;
-  du_estimation[2] = udot_estimate[2]/1000; ///1000.0;
-  du_estimation[3] = udot_estimate[3]/1000; ///1000.0;
-  ddu_estimation[0] = udotdot_estimate[0]/1000/512.0; // should be /1000/512;
+  du_estimation[0] = udot_estimate[0]/1000; 
+  du_estimation[1] = udot_estimate[1]/1000; 
+  du_estimation[2] = udot_estimate[2]/1000; 
+  du_estimation[3] = udot_estimate[3]/1000; 
+  ddu_estimation[0] = udotdot_estimate[0]/1000/512.0;
   ddu_estimation[1] = udotdot_estimate[1]/1000/512.0;
   ddu_estimation[2] = udotdot_estimate[2]/1000/512.0;
   ddu_estimation[3] = udotdot_estimate[3]/1000/512.0;

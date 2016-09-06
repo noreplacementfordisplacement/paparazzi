@@ -93,11 +93,16 @@ int32_t in_cmd_wls[4]; // #jerryrig to pass variables to motor_mixing
 float wlsg2_fb; //FIXME: should be in a nice struct or something
 float g2compare; //FIXME: indi output of g2 feedback for comparison
 float wls_p; float wls_q; float wls_r; //FIXME: Comparison for WLS output directly to INDI output
-//float hopflop_delay;
+
 float u[4]; // for the file logger
+float u_cmd_log[4];
 
 float G1wls[3][4];
 float G2wls[4];
+float phim; float thetam; float psim; //for logging the measured attitude and reference attitude
+float phiref; float thetaref; float psiref;
+float pratem; float qratem; float rratem;
+float prateref; float qrateref; float rrateref; //part of input to WLS
 
 extern struct IndiVariables indi;
 extern void stabilization_indi_init(void);

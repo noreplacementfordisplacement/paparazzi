@@ -195,9 +195,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
      * - add trim + roll + pitch + thrust for each motor
      * - calc max saturation/overflow when yaw command is also added
      */
- 	
-	printf("tmp cmd \n"); // ANNOUNCE FIRST DEBUGGING PHASE
-	
+ 		
     for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
       motor_mixing.commands[i] = motor_mixing.trim[i] +
         roll_coef[i] * in_cmd[COMMAND_ROLL] +
@@ -208,19 +206,6 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       tmp_cmd = motor_mixing.commands[i] + yaw_coef[i] * in_cmd[COMMAND_YAW];
       tmp_cmd /= MOTOR_MIXING_SCALE;
        
-	// MANUAL DEBUGGING #COMMANDS
-	printf("\n MM in Roll %d    ", in_cmd[COMMAND_ROLL]);
-//	printf("MM in Pitch %d    ", in_cmd[COMMAND_PITCH]);
-	printf("MM in Thrust %d  \n", in_cmd[COMMAND_THRUST]);
-
-       // MANUAL DEBUGGING #MOTOR_MIXING_1st_INPUT
-	printf("  m%d ",i);
-	printf("w_c: %d ", tmp_cmd);
-		//extra space
-	   if (i == 3){
-		 printf("\n");
-		}
-
       /* remember max overflow (how much in saturation) */
       if (-tmp_cmd > max_overflow) {
         max_overflow = -tmp_cmd;
@@ -274,38 +259,13 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
       motor_mixing.nb_saturation++;
     }
 
-  	// MANUAL DEBUGGING #MOTOR_MIXING_FINAL
-	printf("motor_mixing_last \n"); //announcement
-
-        for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
-	  	printf("  m%d",i);
-	   	printf("w_c: %d ", motor_mixing.commands[i]);
-		//extra space
-	   if (i == 3){
-		 printf("\n");
-		}
-        }
-
-	//MANUAL DEBUGGING #WLS
+ 	//MANUAL DEBUGGING #WLS
   	int32_t wls_override[4] = {0, 0, 0, 0};
 	//allocate wls_override to in_cmd etc.
 	wls_override[0] = in_cmd_wls[0];
 	wls_override[1] = in_cmd_wls[1];
 	wls_override[2] = in_cmd_wls[2];
-	wls_override[3] = in_cmd_wls[3];
-
-	printf("wls override \n");
-
-        for (i = 0; i < MOTOR_MIXING_NB_MOTOR; i++) {
-//         WLS OVERRIDE
-	  	printf("  m%d ",i);
-	   	printf("w_c: %d ", wls_override[i]);
-		//extra space
-	   if (i == 3){
-		 printf("\n");
-		}
-        }
-		
+	wls_override[3] = in_cmd_wls[3];	
 
     /* For testing motor failure */
     if (motors_on && override_on) {
@@ -322,13 +282,7 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
 //           motor_mixing.commands[i] = motor_mixing.override_value[i]; //OLD ORIGINAL
 //         WLS OVERRIDE
 	   motor_mixing.commands[i] = wls_override[i];
-//	  	printf("m %d ",i);
-	   	printf("w_c: %d", wls_override[i]);
-		//extra space
-	   if (i == 3){
-		 printf("\n");
-		}
-        }
+	         }
       }
     }
     bound_commands();
@@ -339,4 +293,3 @@ void motor_mixing_run(bool motors_on, bool override_on, pprz_t in_cmd[])
     }
   }
 }
-
