@@ -132,10 +132,8 @@ float umax[NICO] = {0.0 , 0.0, 0.0, 0.0};
 
 int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
-float wls_temp_thrust = 0; //Incremental thrust
-
-static float Wv[MARINUS] = {10, 10, 1, 1}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
-bool regindi = false; //Set if the WLS INDI or Regular INDI is used: false = WLS INDI, true = Regular INDI
+float wls_temp_thrust = 0; //Incremental thruststatic float Wv[MARINUS] = {10, 10, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+static float Wv[MARINUS] = {1, 1, 1, 1}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
 					{0.015, 0.015, -0.015, -0.015},
@@ -143,10 +141,7 @@ bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be a
 					{0.25, 0.25, 0.25, 0.25}}; //G1 + G2 for WLS control allocator */
 
 // Previously identified Pseudo Inverse of G1+G2
-static float B_pinv[4][3] = {{ 14.6100,  19.4798,  -3.3178}, 
-{  -13.2462,  20.6144,   4.6159},
-{  -13.7314, -23.1307,  -3.6051},
-{   12.3475, -20.6881,  4.6254}};
+static float B_pinv[4][3] = {{ 13.0152,   19.0064,   -3.5344}, {-12.4792, 20.7766, 3.6274}, {-12.2737 ,-21.2221  ,-3.5606}, {11.8252, -20.0975 ,3.7451}};
 
 float** Bwls;
 
@@ -168,11 +163,11 @@ float G1_new[3][4] = {{0.0 , 0.0, 0.0 , 0.0 },
 float G2_new[4] = {0.0, 0.0, 0.0, 0.0};
 
 // Logged data
-float G1wls[3][4] = {{18.714466,-19.069790,-17.831696,18.556572},
-		{10.775445,11.787354,-11.81133,-13.239703}, 
-		{-1.484409,1.169872,-0.327754,0.601182}};
+float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261},
+{11.753228, 12.406771, -12.40436, -12.717836},
+{-1.774367, 1.461394, -0.34027, 0.596049}};
 
-float G2wls[4] = {-50.354893,63.950779,-51.292622,73.191154};
+float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568};
 
 
 float mu1 = 0.00001;
@@ -509,8 +504,9 @@ if (regindi == true){
    Bound(u_cmd[3], 0, MAX_MOTOR_WLS);
   }
  
- // Get body euler angles
- phim = stateGetNedToBodyEulers_f() -> phi;
+//@@@@@@@@@@@@@@@@@@@@ Get your log on! @@@@@@@@@@@@@@@@@@@@@@@@@@
+
+ phim = stateGetNedToBodyEulers_f() -> phi;  // Get body euler angles
  thetam = stateGetNedToBodyEulers_f() -> theta;
  psim = stateGetNedToBodyEulers_f() -> psi;
 
@@ -520,15 +516,24 @@ if (regindi == true){
 
  prateref =  indi.angular_accel_ref.p; // Get angular acc. reference 
  qrateref =  indi.angular_accel_ref.q; 
- rrateref =  indi.angular_accel_ref.r; 
+ rrateref =  indi.angular_accel_ref.r;
+
+ vlog[0] = v[0]; // Log inputs to WLS
+ vlog[1] = v[1];
+ vlog[2] = v[2];
+ vlog[3] = v[3];
+ vlog[4] = (indi.g1.r + indi.g2) * (indi.angular_accel_ref.r - indi.rate.dx.r + indi.g2 * indi.du.r); 
 
  u_cmd_log[0] = u_actuators[0]; //log percieved actuator feedback
  u_cmd_log[1] = u_actuators[1];
  u_cmd_log[2] = u_actuators[2];
  u_cmd_log[3] = u_actuators[3];
 
- // Get body euler reference angles
- phiref = stab_att_sp_euler.phi;
+ accestlog[0] = ratedotdot_estimation.p;
+ accestlog[1] = ratedotdot_estimation.q;
+ accestlog[2] = ratedotdot_estimation.r;
+
+ phiref = stab_att_sp_euler.phi;  // Get body euler reference angles
  thetaref = stab_att_sp_euler.theta;
  psiref = stab_att_sp_euler.psi; 
 

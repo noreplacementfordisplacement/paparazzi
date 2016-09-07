@@ -65,8 +65,12 @@ void file_logger_start(void)
   if (file_logger != NULL) {
     fprintf(
       file_logger,
- 	"counter, || phi, theta, psi, || phiref, thetaref, psiref, || w_obs_1, w_obs_2, w_obs_3, w_obs_4, || w_ref_1, w_ref_2, w_ref_3, w_ref_4, || mrate_p, mrate_q, mrate_r, || refacc_p, refacc_q, refacc_r, || w_wls_1, w_wls_2, w_wls_3, w_wls_4, || w_act_1, w_act_2, w_act_3, w_act_4, || w_mm_1, w_mm_2, w_mm_3, w_mm_4,||  \n"); //  u_obs[0], u_obs[1], u_obs[2], u_obs[3], u_cmd[0], u_cmd[1], u_cmd[2], u_cmd[3], phi, theta, psi \n" /*      "counter \n, G[0][0], G[0][1], G[0][2], G[0][3] \n G[1][0], G[1][1], G[1][2], G[1][3] \n G[2][0], G[2][1], G[2][2], G[2][3] \n G2[0][0], G2[0][1], G2[0][2], G2[0][3] \n"*/
+ 	"counter,  phi, theta, psi, phiref, thetaref, psiref, w_obs_1, w_obs_2, w_obs_3, w_obs_4, w_ref_1, w_ref_2, w_ref_3, w_ref_4, mrate_p, mrate_q, mrate_r, refacc_p, refacc_q, refacc_r, estacc_p, estacc_q, estacc_r, w_wls_1, w_wls_2, w_wls_3, w_wls_4, w_act_1, w_act_2, w_act_3, w_act_4, w_mm_1, w_mm_2, w_mm_3, w_mm_4, vlog_1, vlog_2, vlog_3, vlog_4, vlog_5, cmd_ROLL, cmd_PITCH, cmd_YAW, cmd_THRUST \n");
 
+/* if (file_logger != NULL) {
+    fprintf(
+      file_logger,
+	"counter \n, G[0][0], G[0][1], G[0][2], G[0][3] \n G[1][0], G[1][1], G[1][2], G[1][3] \n G[2][0], G[2][1], G[2][2], G[2][3] \n G2[0][0], G2[0][1], G2[0][2], G2[0][3] \n"); */
   }
 }
 
@@ -91,11 +95,14 @@ void file_logger_periodic(void)
   fprintf(file_logger, " %f, %f, %f, %f, %f, %f,", phim, thetam, psim, phiref, thetaref, psiref);
   fprintf(file_logger, " %d, %d, %d, %d, %d, %d, %d, %d,", actuators_bebop.rpm_obs[0], actuators_bebop.rpm_obs[1], actuators_bebop.rpm_obs[2], actuators_bebop.rpm_obs[3], actuators_bebop.rpm_ref[0], actuators_bebop.rpm_ref[1], actuators_bebop.rpm_ref[2], actuators_bebop.rpm_ref[3]);
   fprintf(file_logger, " %f, %f, %f, %f, %f, %f,", pratem, qratem, rratem, prateref, qrateref, rrateref);
+  fprintf(file_logger, " %f, %f, %f,", accestlog[0], accestlog[1], accestlog[2]);
   fprintf(file_logger, " %f, %f, %f, %f, %f, %f, %f, %f,", u[0], u[1], u[2], u[3], u_cmd_log[0], u_cmd_log[1], u_cmd_log[2], u_cmd_log[3]);
-  fprintf(file_logger, "%d, %d, %d, %d \n", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]); 
+  fprintf(file_logger, " %d, %d, %d, %d", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]);
+  fprintf(file_logger, " %f, %f, %f, %f, %f", vlog[0], vlog [1], vlog [2], vlog [3], vlog [4]);
+  fprintf(file_logger, " %f, %f, %f, %f \n", stabilization_cmd[COMMAND_ROLL], stabilization_cmd[COMMAND_PITCH], stabilization_cmd[COMMAND_YAW], stabilization_cmd[COMMAND_THRUST]);
 
-  // LOGGING ACTUATOR EFFECTIVENESS
-/*  fprintf(file_logger,"%d \n",
+/*  // LOGGING ACTUATOR EFFECTIVENESS
+  fprintf(file_logger,"%d \n",
           counter);
   // PRINT DUCKING matrices
   fprintf(file_logger,"%f,%f,%f,%f \n",
@@ -117,7 +124,7 @@ fprintf(file_logger,"%f,%f,%f,%f \n",
           G2wls[0],
           G2wls[1],
           G2wls[2],
-          G2wls[3]); */
+          G2wls[3]);*/
 
   counter++;
 }

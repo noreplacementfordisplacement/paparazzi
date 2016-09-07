@@ -54,6 +54,10 @@
     </block>
     <block name="180deg yaw" strip_button="Standby" strip_icon="home.png">
       <call fun="nav_set_heading_deg(180)"/>
+      <stay wp="STDBY"/>
+    </block>
+    <block name="45deg yaw" strip_button="Standby" strip_icon="home.png">
+      <call fun="nav_set_heading_deg(45)"/>
       <stay wp="STDBY"/> 
     </block>
     <block name="270deg yaw" strip_button="Standby" strip_icon="home.png">

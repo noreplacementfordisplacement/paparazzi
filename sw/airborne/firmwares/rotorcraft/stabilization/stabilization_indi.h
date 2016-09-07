@@ -96,6 +96,8 @@ float wls_p; float wls_q; float wls_r; //FIXME: Comparison for WLS output direct
 
 float u[4]; // for the file logger
 float u_cmd_log[4];
+float vlog[5]; //log WLS and INDI input
+float accestlog[3];
 
 float G1wls[3][4];
 float G2wls[4];

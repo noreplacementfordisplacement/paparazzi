@@ -81,7 +81,7 @@
 
   <section name="IMU" prefix="IMU_">
     <define name="BODY_TO_IMU_PHI" value="0." unit="deg"/>
-    <define name="BODY_TO_IMU_THETA" value="0." unit="deg"/>
+    <define name="BODY_TO_IMU_THETA" value="2.4" unit="deg"/> <!--DEFAULT 0 -->
     <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/>
   </section>
 
@@ -202,12 +202,12 @@
 
   <section name="GUIDANCE_H" prefix="GUIDANCE_H_">
     <!-- Good weather -->
-    <define name="MAX_BANK" value="20" unit="deg"/>
+    <define name="MAX_BANK" value="20" unit="deg"/> <!-- SHOULD BE: 20!!! -->
     <define name="REF_MAX_SPEED" value="2" unit="m/s"/>
     <!-- Bad weather -->
     <!-- define name="MAX_BANK" value="32" unit="deg"/ -->
-    <define name="PGAIN" value="79"/> <!--79 default -->
-    <define name="DGAIN" value="100"/>  <!--100 default -->
+    <define name="PGAIN" value="179"/> <!--79 default -->
+    <define name="DGAIN" value="200"/>  <!--100 default -->
     <define name="IGAIN" value="30"/>  <!--30 default -->
   </section>
 
@@ -227,7 +227,7 @@
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
     <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
-<!-- <define name="MODE_AUTO2" value="AP_MODE_ATTITUDE_Z_HOLD"/> -->
+<!--    <define name="MODE_AUTO2" value="AP_MODE_ATTITUDE_Z_HOLD"/> -->
     <define name="NO_RC_THRUST_LIMIT" value="TRUE"/>
   </section>
 
