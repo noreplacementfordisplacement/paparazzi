@@ -97,8 +97,8 @@ void file_logger_periodic(void)
   fprintf(file_logger, " %f, %f, %f, %f, %f, %f,", pratem, qratem, rratem, prateref, qrateref, rrateref);
   fprintf(file_logger, " %f, %f, %f,", accestlog[0], accestlog[1], accestlog[2]);
   fprintf(file_logger, " %f, %f, %f, %f, %f, %f, %f, %f,", u[0], u[1], u[2], u[3], u_cmd_log[0], u_cmd_log[1], u_cmd_log[2], u_cmd_log[3]);
-  fprintf(file_logger, " %d, %d, %d, %d", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]);
-  fprintf(file_logger, " %f, %f, %f, %f, %f", vlog[0], vlog [1], vlog [2], vlog [3], vlog [4]);
+  fprintf(file_logger, " %d, %d, %d, %d,", motor_mixing.commands[0], motor_mixing.commands[1], motor_mixing.commands[2], motor_mixing.commands[3]);
+  fprintf(file_logger, " %f, %f, %f, %f, %f,", vlog[0], vlog [1], vlog [2], vlog [3], vlog [4]);
   fprintf(file_logger, " %f, %f, %f, %f \n", stabilization_cmd[COMMAND_ROLL], stabilization_cmd[COMMAND_PITCH], stabilization_cmd[COMMAND_YAW], stabilization_cmd[COMMAND_THRUST]);
 
 /*  // LOGGING ACTUATOR EFFECTIVENESS

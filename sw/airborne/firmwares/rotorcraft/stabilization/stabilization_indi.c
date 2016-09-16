@@ -133,7 +133,8 @@ float umax[NICO] = {0.0 , 0.0, 0.0, 0.0};
 int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
 float wls_temp_thrust = 0; //Incremental thruststatic float Wv[MARINUS] = {10, 10, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
-static float Wv[MARINUS] = {1, 1, 1, 1}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+static float Wv[MARINUS] = {100, 100, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+bool regindi = true; // Boolean to indicate if regular INDI should be run (unconstrained)
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
 					{0.015, 0.015, -0.015, -0.015},
@@ -167,7 +168,14 @@ float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261},
 {11.753228, 12.406771, -12.40436, -12.717836},
 {-1.774367, 1.461394, -0.34027, 0.596049}};
 
+/*float G1wls[3][4] = {{20.570812, -20.139616, 0, 19.833261},
+{11.753228, 12.406771, 0, -12.717836},
+{-1.774367, 1.461394, 0, 0.596049}};*/
+
+
 float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568};
+
+/*float G2wls[4] = {-64.577644, 63.09156, 0, 73.646568};*/
 
 
 float mu1 = 0.00001;

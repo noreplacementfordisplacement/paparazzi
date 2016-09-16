@@ -69,7 +69,7 @@
  * This setting limits the saturation_offset. Default is 10% of maximum command.
  */
 #ifndef MOTOR_MIXING_MAX_SATURATION_OFFSET
-#define MOTOR_MIXING_MAX_SATURATION_OFFSET MAX_PPRZ/10
+#define MOTOR_MIXING_MAX_SATURATION_OFFSET MAX_PPRZ/100 //10 == default saturation offset
 #endif
 
 #ifndef MOTOR_MIXING_MIN_MOTOR_STARTUP
