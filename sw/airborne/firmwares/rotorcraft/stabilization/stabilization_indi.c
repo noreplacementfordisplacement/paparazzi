@@ -135,6 +135,9 @@ int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 float wls_temp_thrust = 0; //Incremental thruststatic float Wv[MARINUS] = {10, 10, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 static float Wv[MARINUS] = {1000, 1000, 1, 100}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool regindi = false; // Boolean to indicate if regular INDI should be run (unconstrained)
+bool yawh = true; // Boolean to indicate if we want to run the yawh (yaw limiter)
+float overflow; float overflow_x; //max overflow values for YAWH
+float c_yaw; //YAW command
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
 					{0.015, 0.015, -0.015, -0.015},015
@@ -164,26 +167,23 @@ float G1_new[3][4] = {{0.0 , 0.0, 0.0 , 0.0 },
 float G2_new[4] = {0.0, 0.0, 0.0, 0.0};
 
 // Logged data
-/*float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261}, //CLEAN
+float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261}, //CLEAN
 {11.753228, 12.406771, -12.40436, -12.717836},
-{-1.774367, 1.461394, -0.34027, 0.596049}};*/
+{-1.774367, 1.461394, -0.34027, 0.596049}};
 
-float G1wls[3][4] = {{17.430408,-33.489235,-13.738144,35.432743}, //SINGLE PROP FAILURE
+// Values for manual yawh 
+float G1Pyawh = 20;
+float G1Qyawh = 12.2;
+float G1Ryawh = 1;
+float G2yawh = 65;
+
+/*float G1wls[3][4] = {{17.430408,-33.489235,-13.738144,35.432743}, //SINGLE PROP FAILURE
 {9.660404,8.980399,-1.605346,-10.372191}, 
-{-3.790781,2.755696,0.470100,1.028636 }};
+{-3.790781,2.755696,0.470100,1.028636 }};*/
 
-/*float G1wls[3][4] = {{20.570812, -20.139616, 0, 19.833261},
-{11.753228, 12.406771, 0, -12.717836},
-{-1.774367, 1.461394, 0, 0.596049}};*/
+float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568}; //CLEAN
 
-
-//float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568}; //CLEAN
-
-float G2wls[4] = {-129.918259,79.169815,-10.084740,68.778030}; //SINGLE PROP FAILURE
-
-
-/*float G2wls[4] = {-64.577644, 63.09156, 0, 73.646568};*/
-
+//float G2wls[4] = {-129.918259,79.169815,-10.084740,68.778030}; //SINGLE PROP FAILURE
 
 float mu1 = 0.00001;
 float mu2 = 0.00001*600.0;
@@ -411,12 +411,42 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   umin[1] = -u_actuators[1]; 
   umin[2] = -u_actuators[2]; 
   umin[3] = -u_actuators[3];
+  
+//FIND "largest" umin (absolute) FOR YAWH
+  overflow = 0;
+  for (int i = 0; i < NICO; i++) {
+	if(i == 0){
+		overflow = umin[i];
+	}
+	else{
+	  if(umin[i] > overflow){
+		overflow = umin[i];
+	 	}
+	}
+  }
    
   //MAX possible MAXIMUM increment
   umax[0] = MAX_MOTOR_WLS - u_actuators[0];
   umax[1] = MAX_MOTOR_WLS - u_actuators[1];
   umax[2] = MAX_MOTOR_WLS - u_actuators[2];
   umax[3] = MAX_MOTOR_WLS - u_actuators[3];
+
+  //FIND "smallest" umax (absolute) FOR YAWH
+  overflow_x = 0;
+  for (int i = 0; i < NICO; i++) {
+	if(i == 0){
+		overflow_x = umax[i];
+	}
+	else{
+	  if(umax[i] < overflow){
+		overflow_x = umax[i];
+	 	}
+	}
+  }
+  //FIND absolute largest max FOR YAWH
+  if (-1*overflow > overflow_x){
+	overflow_x = -1*overflow;
+	}
 
 //  static float** B; // Initialize **B
   
@@ -442,7 +472,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   v[2] = (indi.angular_accel_ref.r - indi.rate.dx.r + wlsg2_fb);
   v[3] = wls_temp_thrust;
 
-if (regindi == false){
+if (regindi == false || yawh == false  ){
   // WLS Control Allocator
   // u: output incremental actuator commands, v: control objective, umin,umax: maximum possible positive and negative increments, B: control effectiveness matrix (needs to be of ** type), Wv: priority of WLS control allocator, gamma (1000): weight on control objective solution (should be => 1000), rmax (100): maximum number of iterations
   wls_alloc(u,v,umin,umax,Bwls,NICO,MARINUS,0,0,Wv,0,0,10000,100);
@@ -459,9 +489,36 @@ if (regindi == true){
   	u[3] = (B_pinv[3][0] * v[0]) + (B_pinv[3][1] * v[1]) + (B_pinv[3][2] * v[2]);
 }	
 
- // Compute G2 feedback for INDI on yaw axis
-  wlsg2_fb = (G2wls[0]*INDI_EST_SCALE*u[0] + G2wls[1]*INDI_EST_SCALE*u[1] + G2wls[2]*INDI_EST_SCALE*u[2] + G2wls[3]*INDI_EST_SCALE*u[3]);
+if (yawh == true){ //v[3] = wls_temp_thrust
+	c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Qyawh+G2yawh))*v[2];
+	// HEDGE THE YAW INCREMENT
+	if(c_yaw < 0){
+		c_yaw = -1*c_yaw;
+		if(c_yaw > overflow_x){
+			c_yaw = overflow_x;
+			}
+		c_yaw = -1*c_yaw;
+	}
+	else{
+		if(c_yaw > overflow_x){
+			c_yaw = overflow_x;
+			}
+	}	
+	u[0] = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] + 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] - c_yaw;
+	u[1] = -1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] + 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] + c_yaw;
+	u[2] = -1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] - 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] - c_yaw;
+	u[3] = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] - 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] + c_yaw;
+}
 
+
+
+ // Compute G2 feedback for INDI on yaw axis
+if (yawh == true){
+  wlsg2_fb = (-G2yawh*INDI_EST_SCALE*u[0] + G2yawh*INDI_EST_SCALE*u[1] -G2yawh*INDI_EST_SCALE*u[2] + G2yawh*INDI_EST_SCALE*u[3]);
+}
+else{
+  wlsg2_fb = (G2wls[0]*INDI_EST_SCALE*u[0] + G2wls[1]*INDI_EST_SCALE*u[1] + G2wls[2]*INDI_EST_SCALE*u[2] + G2wls[3]*INDI_EST_SCALE*u[3]);
+}
 //========================================================================================================================================================
 //FIXME: MANUAL ADAPTIVE G1 && G2 FILTERING (less elegent than the other in this document)
 //Sensor dynamics and Filtering (same filter as on gyro measurements) MANUAL ACTUATOR EFFECTIVENESS
@@ -495,9 +552,9 @@ if (regindi == true){
   u_cmd[0] = u[0] + u_actuators[0];
   u_cmd[1] = u[1] + u_actuators[1]; 
   u_cmd[2] = u[2] + u_actuators[2]; 
-  u_cmd[3] = u[3] + u_actuators[3];
+  u_cmd[3] = u[3] + u_actuators[3];  
 
- 	if (regindi == true){ // Add thrust to REGULAR INDI
+ 	if (regindi == true || yawh == true){ // Add thrust to REGULAR INDI
   	float avg_u_in = (u_cmd[0] + u_cmd[1] + u_cmd[2] + u_cmd[3])/4.0;
 
   	if(avg_u_in > 1.0) {

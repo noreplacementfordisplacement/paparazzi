@@ -110,7 +110,7 @@ void motor_mixing_init(void)
       roll_coef[i]  * MOTOR_MIXING_TRIM_ROLL +
       pitch_coef[i] * MOTOR_MIXING_TRIM_PITCH +
       yaw_coef[i]   * MOTOR_MIXING_TRIM_YAW;
-    motor_mixing.override_enabled[i] = false; //should be false
+    motor_mixing.override_enabled[i] = true; //should be false
 	//edited for wls_override
     motor_mixing.override_value[i] = MOTOR_MIXING_MIN_MOTOR;
   }
