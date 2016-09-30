@@ -137,7 +137,7 @@ static float Wv[MARINUS] = {1000, 1000, 1, 100}; //State prioritization {W Roll,
 bool regindi = false; // Boolean to indicate if regular INDI should be run (unconstrained)
 bool yawh = true; // Boolean to indicate if we want to run the yawh (yaw limiter)
 float overflow; float overflow_x; //max overflow values for YAWH
-float c_yaw; //YAW command
+float c_roll; float c_pitch; float c_yaw; //YAW command
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
 					{0.015, 0.015, -0.015, -0.015},015
@@ -490,20 +490,36 @@ if (regindi == true){
 }	
 
 if (yawh == true){ //v[3] = wls_temp_thrust
-	c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Qyawh+G2yawh))*v[2];
-	// HEDGE THE YAW INCREMENT
-	if(c_yaw < 0){
-		c_yaw = -1*c_yaw;
-		if(c_yaw > overflow_x){
-			c_yaw = overflow_x;
-			}
-		c_yaw = -1*c_yaw;
+	c_roll = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0];
+	c_pitch = 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1];
+	c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Ryawh+G2yawh))*v[2];
+	
+	if(c_roll < 0){
+		c_roll = -1*c_roll;
+	}
+	if(c_pitch < 0){
+		c_pitch = -1*c_pitch;
+	}
+
+	overflow_x = overflow_x - (c_roll + c_pitch);	
+	if(overflow_x < 0){
+		c_yaw = 0;
 	}
 	else{
-		if(c_yaw > overflow_x){
-			c_yaw = overflow_x;
-			}
-	}	
+		// HEDGE THE YAW INCREMENT
+		if(c_yaw < 0){
+			c_yaw = -1*c_yaw;
+			if(c_yaw > overflow_x){
+				c_yaw = overflow_x;
+				}
+			c_yaw = -1*c_yaw;
+		}
+		else{
+			if(c_yaw > overflow_x){
+				c_yaw = overflow_x;
+				}
+		}	
+	}
 	u[0] = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] + 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] - c_yaw;
 	u[1] = -1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] + 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] + c_yaw;
 	u[2] = -1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] - 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] - c_yaw;
