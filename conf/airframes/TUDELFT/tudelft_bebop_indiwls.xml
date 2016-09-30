@@ -20,8 +20,8 @@
     <module name="stabilization" type="indi"/>
     <module name="stabilization" type="rate_indi"/>
     <module name="ahrs" type="int_cmpl_quat">
-    	<configure name="USE_MAGNETOMETER" value="FALSE"/>
-    	<define name="AHRS_USE_GPS_HEADING" value="TRUE"/>
+    	<configure name="USE_MAGNETOMETER" value="FALSE"/> <!-- should be FALSE -->
+    	<define name="AHRS_USE_GPS_HEADING" value="TRUE"/> <!-- should be TRUE -->
     </module>
     <module name="ins" type="extended"/>
  <!--  <module name="guidance" type="indi"/> -->
@@ -110,7 +110,7 @@
     <!-- setpoint limits for attitude stabilization rc flight -->
     <define name="SP_MAX_PHI" value="45" unit="deg"/>
     <define name="SP_MAX_THETA" value="45" unit="deg"/>
-    <define name="SP_MAX_R" value="600" unit="deg/s"/> <!--default = 120 -->
+    <define name="SP_MAX_R" value="600" unit="deg/s"/> <!--default = 120 FOR UNCON YAW, 600! -->
     <define name="DEADBAND_A" value="0"/>
     <define name="DEADBAND_E" value="0"/>
     <define name="DEADBAND_R" value="20"/> <!-- default = 50 -->
@@ -181,9 +181,9 @@
   </section>
 
   <section name="GUIDANCE_V" prefix="GUIDANCE_V_">
-	<define name="HOVER_KP" value="333" /> <!-- 283 -->
-	<define name="HOVER_KD" value="102" /> <!-- 82 -->
-	<define name="HOVER_KI" value="43" /> <!-- 13 -->
+	<define name="HOVER_KP" value="1200" /> <!-- 283 -->
+	<define name="HOVER_KD" value="450" /> <!-- 82 -->
+	<define name="HOVER_KI" value="0" /> <!-- 13 -->
 
 <!-- <define name="HOVER_KP" value="283"/>
 <define name="HOVER_KD" value="82"/>
@@ -226,7 +226,8 @@
     <define name="MODE_STARTUP" value="AP_MODE_NAV"/>
     <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
     <define name="MODE_AUTO1" value="AP_MODE_ATTITUDE_Z_HOLD"/>
-    <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+   <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
+<!--    <define name="MODE_AUTO2" value="AP_MODE_CARE_FREE_DIRECT"/> --> <!-- HEADLESS FOR YAW REFERENCE RELEASE -->
 <!--    <define name="MODE_AUTO2" value="AP_MODE_ATTITUDE_Z_HOLD"/>-->
     <define name="NO_RC_THRUST_LIMIT" value="TRUE"/>
   </section>

@@ -133,11 +133,11 @@ float umax[NICO] = {0.0 , 0.0, 0.0, 0.0};
 int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 
 float wls_temp_thrust = 0; //Incremental thruststatic float Wv[MARINUS] = {10, 10, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
-static float Wv[MARINUS] = {100, 100, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
-bool regindi = true; // Boolean to indicate if regular INDI should be run (unconstrained)
+static float Wv[MARINUS] = {1000, 1000, 1, 100}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
+bool regindi = false; // Boolean to indicate if regular INDI should be run (unconstrained)
 bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
-					{0.015, 0.015, -0.015, -0.015},
+					{0.015, 0.015, -0.015, -0.015},015
 					{-0.081, 0.081, -0.081, 0.081},
 					{0.25, 0.25, 0.25, 0.25}}; //G1 + G2 for WLS control allocator */
 
@@ -164,16 +164,23 @@ float G1_new[3][4] = {{0.0 , 0.0, 0.0 , 0.0 },
 float G2_new[4] = {0.0, 0.0, 0.0, 0.0};
 
 // Logged data
-float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261},
+/*float G1wls[3][4] = {{20.570812, -20.139616, -20.075964, 19.833261}, //CLEAN
 {11.753228, 12.406771, -12.40436, -12.717836},
-{-1.774367, 1.461394, -0.34027, 0.596049}};
+{-1.774367, 1.461394, -0.34027, 0.596049}};*/
+
+float G1wls[3][4] = {{17.430408,-33.489235,-13.738144,35.432743}, //SINGLE PROP FAILURE
+{9.660404,8.980399,-1.605346,-10.372191}, 
+{-3.790781,2.755696,0.470100,1.028636 }};
 
 /*float G1wls[3][4] = {{20.570812, -20.139616, 0, 19.833261},
 {11.753228, 12.406771, 0, -12.717836},
 {-1.774367, 1.461394, 0, 0.596049}};*/
 
 
-float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568};
+//float G2wls[4] = {-64.577644, 63.09156, -66.577477, 73.646568}; //CLEAN
+
+float G2wls[4] = {-129.918259,79.169815,-10.084740,68.778030}; //SINGLE PROP FAILURE
+
 
 /*float G2wls[4] = {-64.577644, 63.09156, 0, 73.646568};*/
 
@@ -416,8 +423,8 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
   //FIXME: Not really elegant
 //  if (wls_adaptive == false){
   //Static control effectiveness matrix for the WLS control allocator, last row is not considered INDI, is only used for the Thrust command
-	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.297628763, 0.2770495344, 0.1933141364, 0.2320075662}};
-//	}
+	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.333, 0.333, 0, 0.333}};
+//	}  {0.297628763, 0.2770495344, 0.1933141364, 0.2320075662}} VERIFIED USED!!!
  // FIXME: Allocate and free **B each time... not very efficient
  	Bwls = (float**)calloc(MARINUS, sizeof(float*)); 
  	   for (int i = 0; i < MARINUS; i++) {
@@ -498,7 +505,7 @@ if (regindi == true){
     		u_cmd[1] = u_cmd[1] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
     		u_cmd[2] = u_cmd[2] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
     		u_cmd[3] = u_cmd[3] /avg_u_in * stabilization_cmd[COMMAND_THRUST];
-		 	}
+			}
 		}
 
     if (wls_adaptive == true){
@@ -734,7 +741,11 @@ void stabilization_indi_run(bool enable_integrator __attribute__((unused)), bool
   BoundAbs(stabilization_cmd[COMMAND_ROLL], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_PITCH], MAX_PPRZ);
   BoundAbs(stabilization_cmd[COMMAND_YAW], MAX_PPRZ); 
-
+  
+  cmd_log[0]  = stabilization_cmd[COMMAND_ROLL];
+  cmd_log[1]  = stabilization_cmd[COMMAND_PITCH];
+  cmd_log[2]  = stabilization_cmd[COMMAND_YAW];
+  cmd_log[3]  = stabilization_cmd[COMMAND_THRUST];
 }
 
 // This function reads rc commands

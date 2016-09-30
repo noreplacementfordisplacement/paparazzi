@@ -40,6 +40,10 @@
 #define INT32_MAX (2147483647)
 #endif
 
+//JUST IN CASE!!!
+#define MAX_PPRZ 9600
+
+
 #if defined MOTOR_MIXING_MIN_MOTOR || defined MOTOR_MIXING_MAX_MOTOR
 #error MIN_MOTOR and MAX_MOTOR have to be set via neutral/max of the respective servo
 #endif
@@ -68,9 +72,9 @@
  * this saturation_offset is applied to all motors in order to give attitude commands a higher priority than thrust.
  * This setting limits the saturation_offset. Default is 10% of maximum command.
  */
-#ifndef MOTOR_MIXING_MAX_SATURATION_OFFSET
+//#ifndef MOTOR_MIXING_MAX_SATURATION_OFFSET
 #define MOTOR_MIXING_MAX_SATURATION_OFFSET MAX_PPRZ/100 //10 == default saturation offset
-#endif
+//#endif
 
 #ifndef MOTOR_MIXING_MIN_MOTOR_STARTUP
 #define MOTOR_MIXING_MIN_MOTOR_STARTUP MOTOR_MIXING_MIN_MOTOR

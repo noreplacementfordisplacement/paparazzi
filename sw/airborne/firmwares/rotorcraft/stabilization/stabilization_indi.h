@@ -98,6 +98,7 @@ float u[4]; // for the file logger
 float u_cmd_log[4];
 float vlog[5]; //log WLS and INDI input
 float accestlog[3];
+float cmd_log[4]; // log r p y t COMMANDS
 
 float G1wls[3][4];
 float G2wls[4];
