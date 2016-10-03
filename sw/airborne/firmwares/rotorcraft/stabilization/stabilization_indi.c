@@ -438,7 +438,7 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
 		overflow_x = umax[i];
 	}
 	else{
-	  if(umax[i] < overflow){
+	  if(umax[i] < overflow_x){
 		overflow_x = umax[i];
 	 	}
 	}
