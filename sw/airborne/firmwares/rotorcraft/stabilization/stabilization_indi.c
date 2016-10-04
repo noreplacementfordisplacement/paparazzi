@@ -406,47 +406,6 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
    Bound(u_actuators[2], 0, MAX_MOTOR_WLS);
    Bound(u_actuators[3], 0, MAX_MOTOR_WLS);
  
-  //MAX possible MINUMUM increment 
-  umin[0] = -u_actuators[0]; 
-  umin[1] = -u_actuators[1]; 
-  umin[2] = -u_actuators[2]; 
-  umin[3] = -u_actuators[3];
-  
-//FIND "largest" umin (absolute) FOR YAWH
-  overflow = 0;
-  for (int i = 0; i < NICO; i++) {
-	if(i == 0){
-		overflow = umin[i];
-	}
-	else{
-	  if(umin[i] > overflow){
-		overflow = umin[i];
-	 	}
-	}
-  }
-   
-  //MAX possible MAXIMUM increment
-  umax[0] = MAX_MOTOR_WLS - u_actuators[0];
-  umax[1] = MAX_MOTOR_WLS - u_actuators[1];
-  umax[2] = MAX_MOTOR_WLS - u_actuators[2];
-  umax[3] = MAX_MOTOR_WLS - u_actuators[3];
-
-  //FIND "smallest" umax (absolute) FOR YAWH
-  overflow_x = 0;
-  for (int i = 0; i < NICO; i++) {
-	if(i == 0){
-		overflow_x = umax[i];
-	}
-	else{
-	  if(umax[i] < overflow_x){
-		overflow_x = umax[i];
-	 	}
-	}
-  }
-  //FIND absolute largest max FOR YAWH
-  if (-1*overflow > overflow_x){
-	overflow_x = -1*overflow;
-	}
 
 //  static float** B; // Initialize **B
   
@@ -489,11 +448,67 @@ if (regindi == true){
   	u[3] = (B_pinv[3][0] * v[0]) + (B_pinv[3][1] * v[1]) + (B_pinv[3][2] * v[2]);
 }	
 
-if (yawh == true){ //v[3] = wls_temp_thrust
-	c_roll = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0];
-	c_pitch = 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1];
-	c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Ryawh+G2yawh))*v[2];
-	
+// ---------------/ ----------------/ -------------/ -----------/ YAW HEDGING 
+if (yawh == true){ 
+
+ // normal control increments (unhedged)
+ c_roll = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0];
+ c_pitch = 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1];
+ c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Ryawh+G2yawh))*v[2];
+
+// MINIMUM AND MAXIMUM INCREMENTS	
+  umin[0] = u_actuators[0]; 
+  umin[1] = u_actuators[1]; 
+  umin[2] = u_actuators[2]; 
+  umin[3] = u_actuators[3];
+ 
+  umax[0] = MAX_MOTOR_WLS - u_actuators[0];
+  umax[1] = MAX_MOTOR_WLS - u_actuators[1];
+  umax[2] = MAX_MOTOR_WLS - u_actuators[2];
+  umax[3] = MAX_MOTOR_WLS - u_actuators[3];
+ 
+//FIND absolute smallest umin (absolute) FOR YAWH
+  overflow = 0;
+  overflow_x = 0;
+// yaw > 0 min critic M1, M3 pos critic M2, M4
+if (c_yaw > 0){ 
+	//min critic
+	if(umin[0] < umin[2]){
+		overflow = umin[0];
+	}
+	else{
+		overflow = umin[2];
+	}
+	//max critic
+	if(umax[1] < umax[3]){
+		overflow_x = umax[1];
+	}
+	else{
+		overflow_x = umax[3];
+	}
+  }
+// yaw > 0 min critic M2, M4 pos critic M1, M3
+if (c_yaw < 0){
+	// min critic
+   	if(umin[1] < umin[3]){
+		overflow = umin[1];
+	}
+	else{
+		overflow = umin[3];
+	}
+	//max critic
+	if(umax[0] < umax[2]){
+		overflow_x = umax[0];
+	}
+	else{
+		overflow_x = umax[2];
+	}
+  }
+  // compare min to max critic
+  if (overflow < overflow_x){
+	overflow_x = overflow;
+	}
+  // ACTUAL HEDGING OF YAW
 	if(c_roll < 0){
 		c_roll = -1*c_roll;
 	}
@@ -501,7 +516,9 @@ if (yawh == true){ //v[3] = wls_temp_thrust
 		c_pitch = -1*c_pitch;
 	}
 
-	overflow_x = overflow_x - (c_roll + c_pitch);	
+        // This actually is a discrepancy now as the sign is not taken into account
+	overflow_x = overflow_x - (c_roll + c_pitch);
+
 	if(overflow_x < 0){
 		c_yaw = 0;
 	}
@@ -525,8 +542,6 @@ if (yawh == true){ //v[3] = wls_temp_thrust
 	u[2] = -1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] - 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] - c_yaw;
 	u[3] = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0] - 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1] + c_yaw;
 }
-
-
 
  // Compute G2 feedback for INDI on yaw axis
 if (yawh == true){
