@@ -110,7 +110,7 @@
     <!-- setpoint limits for attitude stabilization rc flight -->
     <define name="SP_MAX_PHI" value="45" unit="deg"/>
     <define name="SP_MAX_THETA" value="45" unit="deg"/>
-    <define name="SP_MAX_R" value="600" unit="deg/s"/> <!--default = 120 FOR UNCON YAW, 600! -->
+    <define name="SP_MAX_R" value="120" unit="deg/s"/> <!--default = 120 FOR UNCON YAW, 600! -->
     <define name="DEADBAND_A" value="0"/>
     <define name="DEADBAND_E" value="0"/>
     <define name="DEADBAND_R" value="20"/> <!-- default = 50 -->
@@ -162,7 +162,7 @@
     <define name="REF_RATE_R" value="28.0"/>
 
     <!--Maxium yaw rate, to avoid instability-->
-    <define name="MAX_R" value="600" unit="deg/s"/> <!--original 120 -->
+    <define name="MAX_R" value="120" unit="deg/s"/> <!--original 120 -->
 
     <!-- second order filter parameters -->
     <define name="FILT_OMEGA" value="50.0"/>

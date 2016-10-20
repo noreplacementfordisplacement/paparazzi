@@ -135,10 +135,10 @@ int32_t in_cmd_wls[NICO]; //FIXME: "Jerryrig" to communicate with motor_mixing
 float wls_temp_thrust = 0; //Incremental thruststatic float Wv[MARINUS] = {10, 10, 1, 5}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 static float Wv[MARINUS] = {1000, 1000, 1, 100}; //State prioritization {W Roll, W pitch, W yaw, TOTAL THRUST}
 bool regindi = false; // Boolean to indicate if regular INDI should be run (unconstrained)
-bool yawh = true; // Boolean to indicate if we want to run the yawh (yaw limiter)
+bool yawh = false; // Boolean to indicate if we want to run the yawh (yaw limiter)
 float overflow; float overflow_x; //max overflow values for YAWH
 float c_roll; float c_pitch; float c_yaw; //YAW command
-bool wls_adaptive  = false; //Boolean to indicate if G1 and G2 are going to be adaptive
+bool wls_adaptive  = true; //Boolean to indicate if G1 and G2 are going to be adaptive
 /*float B_tmp[MARINUS][NICO] = {{0.0210, -0.0210, -0.0210, 0.0210},
 					{0.015, 0.015, -0.015, -0.015},015
 					{-0.081, 0.081, -0.081, 0.081},
@@ -405,15 +405,24 @@ static inline void stabilization_indi_calc_cmd(int32_t indi_commands[], struct I
    Bound(u_actuators[1], 0, MAX_MOTOR_WLS);
    Bound(u_actuators[2], 0, MAX_MOTOR_WLS);
    Bound(u_actuators[3], 0, MAX_MOTOR_WLS);
+
+// MINIMUM AND MAXIMUM INCREMENTS	
+  umin[0] = -u_actuators[0]; 
+  umin[1] = -u_actuators[1]; 
+  umin[2] = -u_actuators[2]; 
+  umin[3] = -u_actuators[3];
  
+  umax[0] = MAX_MOTOR_WLS - u_actuators[0];
+  umax[1] = MAX_MOTOR_WLS - u_actuators[1];
+  umax[2] = MAX_MOTOR_WLS - u_actuators[2];
+  umax[3] = MAX_MOTOR_WLS - u_actuators[3]; 
 
 //  static float** B; // Initialize **B
   
   //FIXME: Not really elegant
 //  if (wls_adaptive == false){
-  //Static control effectiveness matrix for the WLS control allocator, last row is not considered INDI, is only used for the Thrust command
-	float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE}, {0.333, 0.333, 0, 0.333}};
-//	}  {0.297628763, 0.2770495344, 0.1933141364, 0.2320075662}} VERIFIED USED!!!
+  float B_tmp[MARINUS][NICO]  = {{G1wls[0][0]*INDI_EST_SCALE, G1wls[0][1]*INDI_EST_SCALE, G1wls[0][2]*INDI_EST_SCALE, G1wls[0][3]*INDI_EST_SCALE},{G1wls[1][0]*INDI_EST_SCALE, G1wls[1][1]*INDI_EST_SCALE, G1wls[1][2]*INDI_EST_SCALE, G1wls[1][3]*INDI_EST_SCALE}, {G1wls[2][0]*INDI_EST_SCALE + G2wls[0]*INDI_EST_SCALE, G1wls[2][1]*INDI_EST_SCALE + G2wls[1]*INDI_EST_SCALE, G1wls[2][2]*INDI_EST_SCALE + G2wls[2]*INDI_EST_SCALE, G1wls[2][3]*INDI_EST_SCALE + G2wls[3]*INDI_EST_SCALE},{0.297628763, 0.2770495344, 0.1933141364, 0.2320075662}}; // FOR COMPROMISED ACTUATOR THRUST: {0.333, 0.333, 0.00, 0.333}
+
  // FIXME: Allocate and free **B each time... not very efficient
  	Bwls = (float**)calloc(MARINUS, sizeof(float*)); 
  	   for (int i = 0; i < MARINUS; i++) {
@@ -450,12 +459,6 @@ if (regindi == true){
 
 // ---------------/ ----------------/ -------------/ -----------/ YAW HEDGING 
 if (yawh == true){ 
-
- // normal control increments (unhedged)
- c_roll = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0];
- c_pitch = 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1];
- c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Ryawh+G2yawh))*v[2];
-
 // MINIMUM AND MAXIMUM INCREMENTS	
   umin[0] = u_actuators[0]; 
   umin[1] = u_actuators[1]; 
@@ -465,7 +468,12 @@ if (yawh == true){
   umax[0] = MAX_MOTOR_WLS - u_actuators[0];
   umax[1] = MAX_MOTOR_WLS - u_actuators[1];
   umax[2] = MAX_MOTOR_WLS - u_actuators[2];
-  umax[3] = MAX_MOTOR_WLS - u_actuators[3];
+  umax[3] = MAX_MOTOR_WLS - u_actuators[3]; 
+
+ // normal control increments (unhedged)
+ c_roll = 1.0/(INDI_EST_SCALE*G1Pyawh*4)*v[0];
+ c_pitch = 1.0/(INDI_EST_SCALE*G1Qyawh*4)*v[1];
+ c_yaw = 1.0/(INDI_EST_SCALE*4*(G1Ryawh+G2yawh))*v[2];
  
 //FIND absolute smallest umin (absolute) FOR YAWH
   overflow = 0;
